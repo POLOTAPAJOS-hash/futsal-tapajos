@@ -1,0 +1,6 @@
+{
+  "name": "Súmula Online fefuspa",
+  "description": "Sistema digital gratuito para gestão de súmulas no padrão CBFS. Configure ligas, registre lances e exporte PDF para arbitragem em tempo real diretamente da quadra.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
