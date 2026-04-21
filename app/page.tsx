@@ -40,7 +40,8 @@ export default function App() {
     p1i: '', p1f: '', p2i: '', p2f: '', pei: '', pef: '',
     techA: '', techB: '',
     scoreA: 0, scoreB: 0,
-    arb1: '', arb2: '', arb3: '', arb4: '', arb5: '', arb6: ''
+    arb1: '', arb2: '', arb3: '', arb4: '', arb5: '', arb6: '',
+    timeA1: '', timeA2: '', timeB1: '', timeB2: ''
   });
 
   type Player = { 
@@ -55,11 +56,9 @@ export default function App() {
   const [playersB, setPlayersB] = useState<Player[]>([]);
   const [goalsA, setGoalsA] = useState<Goal[]>([]);
   const [goalsB, setGoalsB] = useState<Goal[]>([]);
+  const [subsGridA, setSubsGridA] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
+  const [subsGridB, setSubsGridB] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
   
-  type Sub = { id: number; in: string; out: string; period: string; min: string; };
-  const [subsA, setSubsA] = useState<Sub[]>([]);
-  const [subsB, setSubsB] = useState<Sub[]>([]);
-
   const [faultsA1, setFaultsA1] = useState(0);
   const [faultsA2, setFaultsA2] = useState(0);
   const [faultsB1, setFaultsB1] = useState(0);
@@ -106,6 +105,8 @@ export default function App() {
     }
 
     setPlayersA(freshA); setPlayersB(freshB);
+    setSubsGridA(Array.from({length: 15}, () => Array(5).fill('')));
+    setSubsGridB(Array.from({length: 15}, () => Array(5).fill('')));
     setGoalsA([]); setGoalsB([]);
     setFaultsA1(0); setFaultsA2(0); setFaultsB1(0); setFaultsB2(0);
     setSumula(s => ({ ...s, scoreA: 0, scoreB: 0 }));
@@ -321,14 +322,22 @@ export default function App() {
     }
   };
 
-  const addSub = (team: 'a'|'b') => {
-    const newSub = { id: Date.now(), in: '', out: '', period: '1º Per.', min: '' };
-    if(team === 'a') setSubsA([...subsA, newSub]);
-    else setSubsB([...subsB, newSub]);
-  };
-  const removeSub = (team: 'a'|'b', id: number) => {
-    if(team === 'a') setSubsA(subsA.filter(s => s.id !== id));
-    else setSubsB(subsB.filter(s => s.id !== id));
+  const updateSubsGrid = (team: 'a'|'b', rIdx: number, cIdx: number, val: string) => {
+    if (team === 'a') {
+      setSubsGridA(prev => {
+        const next = [...prev];
+        next[rIdx] = [...next[rIdx]];
+        next[rIdx][cIdx] = val;
+        return next;
+      });
+    } else {
+      setSubsGridB(prev => {
+        const next = [...prev];
+        next[rIdx] = [...next[rIdx]];
+        next[rIdx][cIdx] = val;
+        return next;
+      });
+    }
   };
 
   // ----- FINALIZAR ------
@@ -919,39 +928,29 @@ export default function App() {
                   <div className="goals-grid" style={{gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)'}}>
                     <div>
                       <div className="goals-label" style={{color:'var(--sky)'}}>{gameData.teamA||'EQUIPE A'}</div>
-                      <div className="text-[0.7rem] text-white/50 mb-2 flex gap-1">
-                         <span className="w-[80px]">Período</span><span className="w-[60px]">Tempo</span><span className="w-[60px]">Sai (Nº)</span><span className="w-[60px]">Entra(Nº)</span>
+                      <div className="text-[0.65rem] text-white/40 mb-2 uppercase tracking-wide">Números (5 Iniciais na 1ª linha)</div>
+                      <div className="grid gap-1">
+                        {subsGridA.map((row, rIdx) => (
+                           <div key={rIdx} className="flex gap-1" style={{opacity: rIdx===0 ? 1 : 0.7}}>
+                             {row.map((val, cIdx) => (
+                               <input key={cIdx} className="goal-min text-center bg-white/5 border border-white/10" style={{flex: 1, padding: '0.4rem', minWidth: 0, borderRadius: '4px'}} maxLength={2} inputMode="numeric" value={val} onChange={e=>updateSubsGrid('a', rIdx, cIdx, e.target.value.replace(/\D/g, ''))} />
+                             ))}
+                           </div>
+                        ))}
                       </div>
-                      {subsA.map(s => (
-                        <div className="goal-entry" key={s.id}>
-                          <select className="bg-transparent border border-white/10 text-white rounded outline-none" style={{width:'80px', padding:'0.2rem'}} value={s.period} onChange={e=>setSubsA(subsA.map(x=>x.id===s.id?{...x,period:e.target.value}:x))}>
-                            <option style={{color:'black'}}>1ºP</option><option style={{color:'black'}}>2ºP</option><option style={{color:'black'}}>Pro</option>
-                          </select>
-                          <input className="goal-min" style={{width:'60px'}} value={s.min} maxLength={5} inputMode="numeric" onChange={e=>setSubsA(subsA.map(x=>x.id===s.id?{...x,min:handleTimeChange(e.target.value)}:x))} placeholder="00:00" />
-                          <input className="goal-min" style={{width:'60px'}} value={s.out} maxLength={3} inputMode="numeric" onChange={e=>setSubsA(subsA.map(x=>x.id===s.id?{...x,out:e.target.value}:x))} placeholder="Sai" />
-                          <input className="goal-min" style={{width:'60px'}} value={s.in} maxLength={3} inputMode="numeric" onChange={e=>setSubsA(subsA.map(x=>x.id===s.id?{...x,in:e.target.value}:x))} placeholder="Ent" />
-                          <span className="goal-del" onClick={()=>removeSub('a', s.id)}>✕</span>
-                        </div>
-                      ))}
-                      <button className="add-goal-btn" onClick={()=>addSub('a')}>+ Registrar Substituição</button>
                     </div>
                     <div>
                       <div className="goals-label" style={{color:'var(--yellow)'}}>{gameData.teamB||'EQUIPE B'}</div>
-                      <div className="text-[0.7rem] text-white/50 mb-2 flex gap-1">
-                         <span className="w-[80px]">Período</span><span className="w-[60px]">Tempo</span><span className="w-[60px]">Sai (Nº)</span><span className="w-[60px]">Entra(Nº)</span>
+                      <div className="text-[0.65rem] text-white/40 mb-2 uppercase tracking-wide">Números (5 Iniciais na 1ª linha)</div>
+                      <div className="grid gap-1">
+                        {subsGridB.map((row, rIdx) => (
+                           <div key={rIdx} className="flex gap-1" style={{opacity: rIdx===0 ? 1 : 0.7}}>
+                             {row.map((val, cIdx) => (
+                               <input key={cIdx} className="goal-min text-center bg-white/5 border border-white/10" style={{flex: 1, padding: '0.4rem', minWidth: 0, borderRadius: '4px'}} maxLength={2} inputMode="numeric" value={val} onChange={e=>updateSubsGrid('b', rIdx, cIdx, e.target.value.replace(/\D/g, ''))} />
+                             ))}
+                           </div>
+                        ))}
                       </div>
-                      {subsB.map(s => (
-                        <div className="goal-entry" key={s.id}>
-                          <select className="bg-transparent border border-white/10 text-white rounded outline-none" style={{width:'80px', padding:'0.2rem'}} value={s.period} onChange={e=>setSubsB(subsB.map(x=>x.id===s.id?{...x,period:e.target.value}:x))}>
-                            <option style={{color:'black'}}>1ºP</option><option style={{color:'black'}}>2ºP</option><option style={{color:'black'}}>Pro</option>
-                          </select>
-                          <input className="goal-min" style={{width:'60px'}} value={s.min} maxLength={5} inputMode="numeric" onChange={e=>setSubsB(subsB.map(x=>x.id===s.id?{...x,min:handleTimeChange(e.target.value)}:x))} placeholder="00:00" />
-                          <input className="goal-min" style={{width:'60px'}} value={s.out} maxLength={3} inputMode="numeric" onChange={e=>setSubsB(subsB.map(x=>x.id===s.id?{...x,out:e.target.value}:x))} placeholder="Sai" />
-                          <input className="goal-min" style={{width:'60px'}} value={s.in} maxLength={3} inputMode="numeric" onChange={e=>setSubsB(subsB.map(x=>x.id===s.id?{...x,in:e.target.value}:x))} placeholder="Ent" />
-                          <span className="goal-del" onClick={()=>removeSub('b', s.id)}>✕</span>
-                        </div>
-                      ))}
-                      <button className="add-goal-btn" onClick={()=>addSub('b')}>+ Registrar Substituição</button>
                     </div>
                   </div>
                   <div className="step-nav">
@@ -1028,9 +1027,18 @@ export default function App() {
                      <div className="faults-display">
                        {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsA1>=n ? (n>=6?'crit':'on'):''}`} onClick={()=>setFaultsA1(n === faultsA1 ? n-1 : n)}>{n}</button>)}
                      </div>
+                     <div className="mt-2 flex items-center gap-2">
+                       <span className="text-[0.7rem] text-white/50">Pedido de Tempo:</span>
+                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeA1} onChange={e=>setSumula({...sumula, timeA1:handleTimeChange(e.target.value)})} />
+                     </div>
+
                      <div style={{fontSize:'.72rem',color:'var(--sub)',margin:'.75rem 0 .45rem'}}>2º Período — {gameData.teamA}</div>
                      <div className="faults-display">
                        {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsA2>=n ? (n>=6?'crit':'on'):''}`} onClick={()=>setFaultsA2(n === faultsA2 ? n-1 : n)}>{n}</button>)}
+                     </div>
+                     <div className="mt-2 flex items-center gap-2">
+                       <span className="text-[0.7rem] text-white/50">Pedido de Tempo:</span>
+                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeA2} onChange={e=>setSumula({...sumula, timeA2:handleTimeChange(e.target.value)})} />
                      </div>
                    </div>
                    <div className="team-panel" style={{padding:'1rem'}}>
@@ -1038,9 +1046,18 @@ export default function App() {
                      <div className="faults-display">
                        {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsB1>=n ? (n>=6?'crit':'on'):''}`} onClick={()=>setFaultsB1(n === faultsB1 ? n-1 : n)}>{n}</button>)}
                      </div>
+                     <div className="mt-2 flex items-center gap-2">
+                       <span className="text-[0.7rem] text-white/50">Pedido de Tempo:</span>
+                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeB1} onChange={e=>setSumula({...sumula, timeB1:handleTimeChange(e.target.value)})} />
+                     </div>
+
                      <div style={{fontSize:'.72rem',color:'var(--sub)',margin:'.75rem 0 .45rem'}}>2º Período — {gameData.teamB}</div>
                      <div className="faults-display">
                        {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsB2>=n ? (n>=6?'crit':'on'):''}`} onClick={()=>setFaultsB2(n === faultsB2 ? n-1 : n)}>{n}</button>)}
+                     </div>
+                     <div className="mt-2 flex items-center gap-2">
+                       <span className="text-[0.7rem] text-white/50">Pedido de Tempo:</span>
+                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeB2} onChange={e=>setSumula({...sumula, timeB2:handleTimeChange(e.target.value)})} />
                      </div>
                    </div>
                  </div>
@@ -1049,7 +1066,7 @@ export default function App() {
                     <button className="btn btn-ghost" onClick={()=>setCurrentStep(2)}>← Anterior</button>
                     <button className="btn btn-primary" onClick={()=>setCurrentStep(4)}>Próximo: Arbitragem →</button>
                   </div>
-               </div>
+                </div>
              )}
 
              {currentStep === 4 && (
@@ -1257,36 +1274,40 @@ export default function App() {
           <div className="p-team-col">
             <div className="p-team-name">EQUIPE A: {gameData.teamA}</div>
             <table className="p-table">
-              <thead><tr><th>Nº</th><th>Atleta</th><th>Gols</th><th>A</th><th>V</th></tr></thead>
+              <thead>
+                <tr>
+                  <th rowSpan={2}>Nº</th><th rowSpan={2}>Atleta</th><th colSpan={5}>SUBSTITUIÇÃO</th><th rowSpan={2}>Gols</th><th rowSpan={2}>A</th><th rowSpan={2}>V</th>
+                </tr>
+                <tr><th></th><th></th><th></th><th></th><th></th></tr>
+              </thead>
               <tbody>
-                {playersA.length > 0 ? playersA.map(p => {
-                   const g = goalsA.filter(x => x.name.includes(p.name)).length;
+                {Array.from({length: 15}).map((_, i) => {
+                   const p = playersA[i];
+                   const g = p ? goalsA.filter(x => x.name.includes(p.name)).length : 0;
                    return (
-                    <tr key={p.id}>
-                      <td>{p.num}</td><td>{p.name} {p.role ? `(${p.role})` : ''}</td>
+                    <tr key={i}>
+                      <td>{p ? p.num : ''}</td><td style={{textAlign: 'left'}}>{p ? `${p.name} ${p.role ? `(${p.role})` : ''}` : ''}</td>
+                      <td>{subsGridA[i][0]}</td>
+                      <td>{subsGridA[i][1]}</td>
+                      <td>{subsGridA[i][2]}</td>
+                      <td>{subsGridA[i][3]}</td>
+                      <td>{subsGridA[i][4]}</td>
                       <td>{g > 0 ? g : ''}</td>
-                      <td style={{fontSize:'10px'}}>{p.y ? (p.yMin ? `${p.yMin}'` : 'X') : ''}</td>
-                      <td style={{fontSize:'10px'}}>{p.r ? (p.rMin ? `${p.rMin}'` : 'X') : ''}</td>
+                      <td style={{fontSize:'10px'}}>{p?.y ? (p.yMin ? `${p.yMin}'` : 'X') : ''}</td>
+                      <td style={{fontSize:'10px'}}>{p?.r ? (p.rMin ? `${p.rMin}'` : 'X') : ''}</td>
                     </tr>
-                 )}) : <tr><td colSpan={5}>Nenhum atleta registrado</td></tr>}
+                 )})}
               </tbody>
             </table>
             <div className="p-section-title">Gols e Faltas (Equipe A)</div>
             <div className="p-goals"><strong>Gols: </strong> 
               {goalsA.length > 0 ? goalsA.map((g,i) => <span key={i}>{g.name} ({g.min}&apos; {g.period}) / </span>) : '—'}
             </div>
-            <div className="p-cards"><strong>Faltas Acumuladas: </strong> 1ºT: {faultsA1} | 2ºT: {faultsA2}</div>
+            <div className="p-cards">
+              <strong>Faltas Acumuladas: </strong> 1ºT: {faultsA1} | 2ºT: {faultsA2}<br/>
+              <strong>Pedidos de Tempo: </strong> 1ºT: {sumula.timeA1 || '—'} | 2ºT: {sumula.timeA2 || '—'}
+            </div>
             
-            <div className="p-section-title" style={{marginTop:'10px'}}>Substituições</div>
-            <table className="p-table" style={{marginTop: '5px'}}>
-              <thead><tr><th>Período</th><th>Tempo</th><th>Entra</th><th>Sai</th></tr></thead>
-              <tbody>
-                {subsA.length > 0 ? subsA.map((s,i) => (
-                  <tr key={i}><td>{s.period}</td><td>{s.min}&apos;</td><td>{s.in}</td><td>{s.out}</td></tr>
-                )) : <tr><td colSpan={4}>Sem substituições</td></tr>}
-              </tbody>
-            </table>
-
             <div className="p-section-title" style={{marginTop:'10px'}}>Comissão Técnica</div>
             <div style={{fontSize:'0.65rem', lineHeight:'1.4'}}>
               <div><strong>Técnico:</strong> {gameData.techA || '—'}</div>
@@ -1301,36 +1322,40 @@ export default function App() {
           <div className="p-team-col">
             <div className="p-team-name">EQUIPE B: {gameData.teamB}</div>
             <table className="p-table">
-              <thead><tr><th>Nº</th><th>Atleta</th><th>Gols</th><th>A</th><th>V</th></tr></thead>
+              <thead>
+                <tr>
+                  <th rowSpan={2}>Nº</th><th rowSpan={2}>Atleta</th><th colSpan={5}>SUBSTITUIÇÃO</th><th rowSpan={2}>Gols</th><th rowSpan={2}>A</th><th rowSpan={2}>V</th>
+                </tr>
+                <tr><th></th><th></th><th></th><th></th><th></th></tr>
+              </thead>
               <tbody>
-                {playersB.length > 0 ? playersB.map(p => {
-                   const g = goalsB.filter(x => x.name.includes(p.name)).length;
+                {Array.from({length: 15}).map((_, i) => {
+                   const p = playersB[i];
+                   const g = p ? goalsB.filter(x => x.name.includes(p.name)).length : 0;
                    return (
-                    <tr key={p.id}>
-                      <td>{p.num}</td><td>{p.name} {p.role ? `(${p.role})` : ''}</td>
+                    <tr key={i}>
+                      <td>{p ? p.num : ''}</td><td style={{textAlign: 'left'}}>{p ? `${p.name} ${p.role ? `(${p.role})` : ''}` : ''}</td>
+                      <td>{subsGridB[i][0]}</td>
+                      <td>{subsGridB[i][1]}</td>
+                      <td>{subsGridB[i][2]}</td>
+                      <td>{subsGridB[i][3]}</td>
+                      <td>{subsGridB[i][4]}</td>
                       <td>{g > 0 ? g : ''}</td>
-                      <td style={{fontSize:'10px'}}>{p.y ? (p.yMin ? `${p.yMin}'` : 'X') : ''}</td>
-                      <td style={{fontSize:'10px'}}>{p.r ? (p.rMin ? `${p.rMin}'` : 'X') : ''}</td>
+                      <td style={{fontSize:'10px'}}>{p?.y ? (p.yMin ? `${p.yMin}'` : 'X') : ''}</td>
+                      <td style={{fontSize:'10px'}}>{p?.r ? (p.rMin ? `${p.rMin}'` : 'X') : ''}</td>
                     </tr>
-                 )}) : <tr><td colSpan={5}>Nenhum atleta registrado</td></tr>}
+                 )})}
               </tbody>
             </table>
             <div className="p-section-title">Gols e Faltas (Equipe B)</div>
             <div className="p-goals"><strong>Gols: </strong> 
               {goalsB.length > 0 ? goalsB.map((g,i) => <span key={i}>{g.name} ({g.min}&apos; {g.period}) / </span>) : '—'}
             </div>
-            <div className="p-cards"><strong>Faltas Acumuladas: </strong> 1ºT: {faultsB1} | 2ºT: {faultsB2}</div>
+            <div className="p-cards">
+              <strong>Faltas Acumuladas: </strong> 1ºT: {faultsB1} | 2ºT: {faultsB2}<br/>
+              <strong>Pedidos de Tempo: </strong> 1ºT: {sumula.timeB1 || '—'} | 2ºT: {sumula.timeB2 || '—'}
+            </div>
             
-            <div className="p-section-title" style={{marginTop:'10px'}}>Substituições</div>
-            <table className="p-table" style={{marginTop: '5px'}}>
-              <thead><tr><th>Período</th><th>Tempo</th><th>Entra</th><th>Sai</th></tr></thead>
-              <tbody>
-                {subsB.length > 0 ? subsB.map((s,i) => (
-                  <tr key={i}><td>{s.period}</td><td>{s.min}&apos;</td><td>{s.in}</td><td>{s.out}</td></tr>
-                )) : <tr><td colSpan={4}>Sem substituições</td></tr>}
-              </tbody>
-            </table>
-
             <div className="p-section-title" style={{marginTop:'10px'}}>Comissão Técnica</div>
             <div style={{fontSize:'0.65rem', lineHeight:'1.4'}}>
               <div><strong>Técnico:</strong> {gameData.techB || '—'}</div>
