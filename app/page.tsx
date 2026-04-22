@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
+import { auth } from '../lib/firebase';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User } from 'firebase/auth';
 
 export default function App() {
   const router = useRouter();
@@ -75,6 +77,36 @@ export default function App() {
   const [colMap, setColMap] = useState({num: '', name: '', pos: ''});
   const [importStatus, setImportStatus] = useState({msg: '', type: ''});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ----- AUTH -----
+  const [user, setUser] = useState<User | null | undefined>(undefined);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authError, setAuthError] = useState('');
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, u => setUser(u));
+    return () => unsub();
+  }, []);
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    try {
+      if (authMode === 'login') {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
+    } catch (err: any) {
+      setAuthError(err.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
 
   // ----- SUMULA INIT -----
   const initSumulaInitialData = React.useCallback((rA?: string, rB?: string) => {
@@ -455,7 +487,41 @@ export default function App() {
   };
 
   // ----- RENDER -----
-  if (!isMounted) return null;
+  if (!isMounted || user === undefined) return null;
+
+  if (user === null) {
+    return (
+      <div className="flex bg-[var(--dark)] text-[var(--text)] min-h-screen items-center justify-center p-4">
+        <div className="bg-[var(--card)] border border-[var(--border)] p-8 rounded-2xl w-full max-w-md shadow-lg">
+          <div className="text-center mb-6">
+            <div className="bg-[var(--blue)] w-14 h-14 mx-auto rounded-xl flex items-center justify-center text-white font-['Bebas_Neue'] text-2xl tracking-wider mb-4">FE</div>
+            <h1 className="font-['Bebas_Neue'] text-3xl text-[var(--sky)] tracking-wide">SÚMULA DIGITAL</h1>
+            <p className="text-[var(--sub)] font-light mt-1">Acesse sua conta para continuar</p>
+          </div>
+          <form onSubmit={handleAuth} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-[var(--sub)] font-medium">E-mail</label>
+              <input type="email" required className="inp" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-[var(--sub)] font-medium">Senha</label>
+              <input type="password" required className="inp" placeholder="••••••" value={password} onChange={e => setPassword(e.target.value)} />
+            </div>
+            {authError && <div className="text-red-500 text-sm mt-1 bg-red-100/10 p-2 rounded">{authError}</div>}
+            <button type="submit" className="btn btn-primary justify-center mt-2 w-full text-[1rem] py-3">
+              {authMode === 'login' ? 'Entrar Módulo Mesário' : 'Criar Conta'}
+            </button>
+          </form>
+          <div className="mt-6 text-center text-sm text-[var(--sub)] pt-4 border-t border-[var(--border)]">
+            {authMode === 'login' ? 'Ainda não é cadastrado?' : 'Já possui cadastro?'}
+            <button type="button" className="text-[var(--sky)] ml-2 hover:underline" onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }}>
+              {authMode === 'login' ? 'Criar nova conta' : 'Fazer login'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const categoriasMenu = [
     ...Array.from({length: 14}, (_, i) => { const n = i+7; return `Sub-${n < 10 ? '0'+n : n}`; }),
@@ -613,7 +679,11 @@ export default function App() {
             </div>
             <span className="topbar-title">{getTabTitle()}</span>
           </div>
-          <div className="topbar-right"><div className="topbar-badge">Sistema Online</div></div>
+          <div className="topbar-right">
+            <div className="text-[0.7rem] text-[var(--sub)] mr-2 hidden sm:block">{user?.email}</div>
+            <button className="btn btn-ghost btn-sm mr-4" onClick={handleLogout}>Sair</button>
+            <div className="topbar-badge">Sistema Online</div>
+          </div>
         </div>
 
         {/* TAB HOME */}

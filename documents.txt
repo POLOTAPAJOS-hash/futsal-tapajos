@@ -1,0 +1,9 @@
+node_modules/@next/eslint-plugin-next/dist/rules/no-document-import-in-page.js
+node_modules/@next/eslint-plugin-next/dist/rules/no-duplicate-head.js
+node_modules/@next/eslint-plugin-next/dist/rules/no-head-import-in-document.js
+node_modules/@next/eslint-plugin-next/dist/rules/no-page-custom-font.js
+node_modules/@next/eslint-plugin-next/dist/rules/no-title-in-document-head.js
+node_modules/@next/swc-linux-x64-gnu/next-swc.linux-x64-gnu.node
+node_modules/@next/swc-linux-x64-musl/next-swc.linux-x64-musl.node
+node_modules/firebase-tools/lib/tsconfig.compile.tsbuildinfo
+node_modules/firebase-tools/lib/tsconfig.publish.tsbuildinfo
