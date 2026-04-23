@@ -43,7 +43,8 @@ export default function App() {
     techA: '', techB: '',
     scoreA: 0, scoreB: 0,
     arb1: '', arb2: '', arb3: '', arb4: '', arb5: '', arb6: '',
-    timeA1: '', timeA2: '', timeB1: '', timeB2: ''
+    timeA1: '', timeA2: '', timeB1: '', timeB2: '',
+    reportType: 'normal', reportText: ''
   });
 
   type Player = { 
@@ -60,11 +61,14 @@ export default function App() {
   const [goalsB, setGoalsB] = useState<Goal[]>([]);
   const [subsGridA, setSubsGridA] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
   const [subsGridB, setSubsGridB] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
+  const [subsGridA2, setSubsGridA2] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
+  const [subsGridB2, setSubsGridB2] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
   
   const [faultsA1, setFaultsA1] = useState(0);
   const [faultsA2, setFaultsA2] = useState(0);
   const [faultsB1, setFaultsB1] = useState(0);
   const [faultsB2, setFaultsB2] = useState(0);
+  const [activeSubPeriod, setActiveSubPeriod] = useState<1 | 2>(1);
 
   // Histórico & Agendados
   const [historico, setHistorico] = useState<any[]>([]);
@@ -139,6 +143,8 @@ export default function App() {
     setPlayersA(freshA); setPlayersB(freshB);
     setSubsGridA(Array.from({length: 15}, () => Array(5).fill('')));
     setSubsGridB(Array.from({length: 15}, () => Array(5).fill('')));
+    setSubsGridA2(Array.from({length: 15}, () => Array(5).fill('')));
+    setSubsGridB2(Array.from({length: 15}, () => Array(5).fill('')));
     setGoalsA([]); setGoalsB([]);
     setFaultsA1(0); setFaultsA2(0); setFaultsB1(0); setFaultsB2(0);
     setSumula(s => ({ ...s, scoreA: 0, scoreB: 0 }));
@@ -356,14 +362,16 @@ export default function App() {
 
   const updateSubsGrid = (team: 'a'|'b', rIdx: number, cIdx: number, val: string) => {
     if (team === 'a') {
-      setSubsGridA(prev => {
+      const setter = activeSubPeriod === 1 ? setSubsGridA : setSubsGridA2;
+      setter(prev => {
         const next = [...prev];
         next[rIdx] = [...next[rIdx]];
         next[rIdx][cIdx] = val;
         return next;
       });
     } else {
-      setSubsGridB(prev => {
+      const setter = activeSubPeriod === 1 ? setSubsGridB : setSubsGridB2;
+      setter(prev => {
         const next = [...prev];
         next[rIdx] = [...next[rIdx]];
         next[rIdx][cIdx] = val;
@@ -995,29 +1003,82 @@ export default function App() {
              {currentStep === 2 && (
                 <div className="step-content active">
                   <div className="sec-title">🔄 Substituições</div>
+                  
+                  {/* Period Switcher */}
+                  <div className="flex gap-2 mb-6 p-1 bg-white/5 rounded-xl max-w-md mx-auto">
+                    <button 
+                      className={`flex-1 py-3 font-bold transition-all rounded-lg flex items-center justify-center gap-2 ${activeSubPeriod === 1 ? 'bg-[#38bdf8] text-white shadow-[0_0_15px_rgba(56,189,248,0.3)]' : 'text-white/40 hover:bg-white/10'}`}
+                      onClick={() => setActiveSubPeriod(1)}
+                    >
+                      <div className={`w-2 h-2 rounded-full ${activeSubPeriod === 1 ? 'bg-white' : 'bg-[#38bdf8]'}`}></div>
+                      PRIMEIRO TEMPO
+                    </button>
+                    <button 
+                      className={`flex-1 py-3 font-bold transition-all rounded-lg flex items-center justify-center gap-2 ${activeSubPeriod === 2 ? 'bg-[#ef4444] text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'text-white/40 hover:bg-white/10'}`}
+                      onClick={() => setActiveSubPeriod(2)}
+                    >
+                      <div className={`w-2 h-2 rounded-full ${activeSubPeriod === 2 ? 'bg-white' : 'bg-[#ef4444]'}`}></div>
+                      SEGUNDO TEMPO
+                    </button>
+                  </div>
+
                   <div className="goals-grid" style={{gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)'}}>
                     <div>
                       <div className="goals-label" style={{color:'var(--sky)'}}>{gameData.teamA||'EQUIPE A'}</div>
-                      <div className="text-[0.65rem] text-white/40 mb-2 uppercase tracking-wide">Números (5 Iniciais na 1ª linha)</div>
+                      <div className="text-[0.65rem] text-white/40 mb-2 uppercase tracking-wide">Números (Substituições {activeSubPeriod}º T)</div>
                       <div className="grid gap-1">
-                        {subsGridA.map((row, rIdx) => (
-                           <div key={rIdx} className="flex gap-1" style={{opacity: rIdx===0 ? 1 : 0.7}}>
-                             {row.map((val, cIdx) => (
-                               <input key={cIdx} className="goal-min text-center bg-white/5 border border-white/10" style={{flex: 1, padding: '0.4rem', minWidth: 0, borderRadius: '4px'}} maxLength={2} inputMode="numeric" value={val} onChange={e=>updateSubsGrid('a', rIdx, cIdx, e.target.value.replace(/\D/g, ''))} />
-                             ))}
+                        {(activeSubPeriod === 1 ? subsGridA : subsGridA2).map((row, rIdx) => (
+                           <div key={rIdx} className="flex flex-col gap-1">
+                             <div className="flex gap-1">
+                               {row.map((val, cIdx) => (
+                                 <input 
+                                   key={cIdx} 
+                                   className="goal-min text-center bg-white/5 border border-white/10" 
+                                   style={{
+                                     flex: 1, 
+                                     padding: '0.4rem', 
+                                     minWidth: 0, 
+                                     borderRadius: '4px',
+                                     color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444',
+                                     fontWeight: 'bold'
+                                   }} 
+                                   maxLength={2} 
+                                   inputMode="numeric" 
+                                   value={val} 
+                                   onChange={e=>updateSubsGrid('a', rIdx, cIdx, e.target.value.replace(/\D/g, ''))} 
+                                 />
+                               ))}
+                             </div>
                            </div>
                         ))}
                       </div>
                     </div>
                     <div>
                       <div className="goals-label" style={{color:'var(--yellow)'}}>{gameData.teamB||'EQUIPE B'}</div>
-                      <div className="text-[0.65rem] text-white/40 mb-2 uppercase tracking-wide">Números (5 Iniciais na 1ª linha)</div>
+                      <div className="text-[0.65rem] text-white/40 mb-2 uppercase tracking-wide">Números (Substituições {activeSubPeriod}º T)</div>
                       <div className="grid gap-1">
-                        {subsGridB.map((row, rIdx) => (
-                           <div key={rIdx} className="flex gap-1" style={{opacity: rIdx===0 ? 1 : 0.7}}>
-                             {row.map((val, cIdx) => (
-                               <input key={cIdx} className="goal-min text-center bg-white/5 border border-white/10" style={{flex: 1, padding: '0.4rem', minWidth: 0, borderRadius: '4px'}} maxLength={2} inputMode="numeric" value={val} onChange={e=>updateSubsGrid('b', rIdx, cIdx, e.target.value.replace(/\D/g, ''))} />
-                             ))}
+                        {(activeSubPeriod === 1 ? subsGridB : subsGridB2).map((row, rIdx) => (
+                           <div key={rIdx} className="flex flex-col gap-1">
+                             <div className="flex gap-1">
+                               {row.map((val, cIdx) => (
+                                 <input 
+                                   key={cIdx} 
+                                   className="goal-min text-center bg-white/5 border border-white/10" 
+                                   style={{
+                                     flex: 1, 
+                                     padding: '0.4rem', 
+                                     minWidth: 0, 
+                                     borderRadius: '4px',
+                                     color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444',
+                                     fontWeight: 'bold'
+                                   }} 
+                                   maxLength={2} 
+                                   inputMode="numeric" 
+                                   value={val} 
+                                   onChange={e=>updateSubsGrid('b', rIdx, cIdx, e.target.value.replace(/\D/g, ''))} 
+                                 />
+                               ))}
+                             </div>
                            </div>
                         ))}
                       </div>
@@ -1149,6 +1210,41 @@ export default function App() {
                     <div className="form-group"><label>Anotador</label><input className="inp" value={sumula.arb4} onChange={e=>setSumula({...sumula,arb4:e.target.value})} placeholder="Nome / UF" /></div>
                     <div className="form-group"><label>Cronometrista</label><input className="inp" value={sumula.arb5} onChange={e=>setSumula({...sumula,arb5:e.target.value})} placeholder="Nome / UF" /></div>
                     <div className="form-group"><label>Representante</label><input className="inp" value={sumula.arb6} onChange={e=>setSumula({...sumula,arb6:e.target.value})} placeholder="Nome / ND" /></div>
+                 </div>
+
+                 <div className="sec-title mt-8">📝 Relatório do Árbitro</div>
+                 <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                   <div className="flex flex-wrap gap-6 mb-4">
+                     <label className="flex items-center gap-2 cursor-pointer group text-white">
+                       <input 
+                         type="radio" 
+                         name="reportType" 
+                         className="w-4 h-4 accent-sky"
+                         checked={sumula.reportType === 'normal'} 
+                         onChange={() => setSumula({...sumula, reportType: 'normal', reportText: ''})} 
+                       />
+                       <span className="text-sm font-medium group-hover:text-sky transition-colors">Jogo Normal</span>
+                     </label>
+                     <label className="flex items-center gap-2 cursor-pointer group text-white">
+                       <input 
+                         type="radio" 
+                         name="reportType" 
+                         className="w-4 h-4 accent-sky"
+                         checked={sumula.reportType === 'attached'} 
+                         onChange={() => setSumula({...sumula, reportType: 'attached'})} 
+                       />
+                       <span className="text-sm font-medium group-hover:text-sky transition-colors">Segue relatório em anexo</span>
+                     </label>
+                   </div>
+                   {sumula.reportType === 'attached' && (
+                     <textarea 
+                       className="inp w-full text-sm" 
+                       style={{ minHeight: '150px', resize: 'vertical' }} 
+                       placeholder="Descreva as ocorrências disciplinares, problemas técnicos ou qualquer outra observação relevante da partida..."
+                       value={sumula.reportText}
+                       onChange={e => setSumula({...sumula, reportText: e.target.value})}
+                     />
+                   )}
                  </div>
                  <div className="step-nav">
                     <button className="btn btn-ghost" onClick={()=>setCurrentStep(3)}>← Anterior</button>
@@ -1354,14 +1450,15 @@ export default function App() {
                 {Array.from({length: 15}).map((_, i) => {
                    const p = playersA[i];
                    const g = p ? goalsA.filter(x => x.name.includes(p.name)).length : 0;
+                   const p1subs = subsGridA[i].filter(v => v !== '').map(v => ({v, c: '#38bdf8'}));
+                   const p2subs = subsGridA2[i].filter(v => v !== '').map(v => ({v, c: '#ef4444'}));
+                   const allSubs = [...p1subs, ...p2subs];
                    return (
                     <tr key={i}>
                       <td>{p ? p.num : ''}</td><td style={{textAlign: 'left'}}>{p ? `${p.name} ${p.role ? `(${p.role})` : ''}` : ''}</td>
-                      <td>{subsGridA[i][0]}</td>
-                      <td>{subsGridA[i][1]}</td>
-                      <td>{subsGridA[i][2]}</td>
-                      <td>{subsGridA[i][3]}</td>
-                      <td>{subsGridA[i][4]}</td>
+                      {[0,1,2,3,4].map(idx => (
+                        <td key={idx} style={{color: allSubs[idx]?.c, fontWeight: 'bold'}}>{allSubs[idx]?.v || ''}</td>
+                      ))}
                       <td>{g > 0 ? g : ''}</td>
                       <td style={{fontSize:'10px'}}>{p?.y ? (p.yMin ? `${p.yMin}'` : 'X') : ''}</td>
                       <td style={{fontSize:'10px'}}>{p?.r ? (p.rMin ? `${p.rMin}'` : 'X') : ''}</td>
@@ -1402,14 +1499,15 @@ export default function App() {
                 {Array.from({length: 15}).map((_, i) => {
                    const p = playersB[i];
                    const g = p ? goalsB.filter(x => x.name.includes(p.name)).length : 0;
+                   const p1subs = subsGridB[i].filter(v => v !== '').map(v => ({v, c: '#38bdf8'}));
+                   const p2subs = subsGridB2[i].filter(v => v !== '').map(v => ({v, c: '#ef4444'}));
+                   const allSubs = [...p1subs, ...p2subs];
                    return (
                     <tr key={i}>
                       <td>{p ? p.num : ''}</td><td style={{textAlign: 'left'}}>{p ? `${p.name} ${p.role ? `(${p.role})` : ''}` : ''}</td>
-                      <td>{subsGridB[i][0]}</td>
-                      <td>{subsGridB[i][1]}</td>
-                      <td>{subsGridB[i][2]}</td>
-                      <td>{subsGridB[i][3]}</td>
-                      <td>{subsGridB[i][4]}</td>
+                      {[0,1,2,3,4].map(idx => (
+                        <td key={idx} style={{color: allSubs[idx]?.c, fontWeight: 'bold'}}>{allSubs[idx]?.v || ''}</td>
+                      ))}
                       <td>{g > 0 ? g : ''}</td>
                       <td style={{fontSize:'10px'}}>{p?.y ? (p.yMin ? `${p.yMin}'` : 'X') : ''}</td>
                       <td style={{fontSize:'10px'}}>{p?.r ? (p.rMin ? `${p.rMin}'` : 'X') : ''}</td>
@@ -1436,6 +1534,11 @@ export default function App() {
               <div><strong>Supervisor:</strong> {gameData.supB || '—'}</div>
             </div>
           </div>
+        </div>
+
+        <div className="p-section-title">Relatório do Árbitro</div>
+        <div style={{fontSize:'0.7rem', border:'1px solid #000', padding:'8px', minHeight:'60px', marginBottom:'15px'}}>
+          {sumula.reportType === 'normal' ? 'JOGO NORMAL' : (sumula.reportText || 'SEGUE RELATÓRIO EM ANEXO (Não preenchido)')}
         </div>
 
         <div className="p-section-title">Equipe de Arbitragem</div>
