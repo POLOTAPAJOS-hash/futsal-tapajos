@@ -2,13 +2,24 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { useRouter } from 'next/navigation';
+import { 
+  Home, 
+  Link as LinkIcon, 
+  FileText, 
+  Calendar, 
+  History, 
+  Settings, 
+  Download, 
+  Printer, 
+  CheckCircle2, 
+  Zap, 
+  Smartphone, 
+  Target 
+} from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User } from 'firebase/auth';
 
 export default function App() {
-  const router = useRouter();
-
   const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('tab-home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -17,8 +28,11 @@ export default function App() {
   // Config
   const [config, setConfig] = useState({
     clube: 'FEFUSPA', cidade: 'Santarém', estado: 'PA', ginasio: '',
-    comp: '', cat: 'Adulto / Masculino', temp: '', nextNum: 1
+    comp: '', cat: 'Adulto / Masculino', temp: '', nextNum: 1,
+    competitions: [] as string[]
   });
+
+  const [newCompName, setNewCompName] = useState('');
 
   // Game data from generator
   const [gameData, setGameData] = useState({
@@ -42,6 +56,8 @@ export default function App() {
     p1i: '', p1f: '', p2i: '', p2f: '', pei: '', pef: '',
     techA: '', techB: '',
     scoreA: 0, scoreB: 0,
+    scoreExtraA: 0, scoreExtraB: 0,
+    scorePenA: 0, scorePenB: 0,
     arb1: '', arb2: '', arb3: '', arb4: '', arb5: '', arb6: '',
     timeA1: '', timeA2: '', timeB1: '', timeB2: '',
     reportType: 'normal', reportText: ''
@@ -59,10 +75,10 @@ export default function App() {
   const [playersB, setPlayersB] = useState<Player[]>([]);
   const [goalsA, setGoalsA] = useState<Goal[]>([]);
   const [goalsB, setGoalsB] = useState<Goal[]>([]);
-  const [subsGridA, setSubsGridA] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
-  const [subsGridB, setSubsGridB] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
-  const [subsGridA2, setSubsGridA2] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
-  const [subsGridB2, setSubsGridB2] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
+  const [subsGridA, setSubsGridA] = useState<string[][]>(Array.from({length: 8}, () => Array(5).fill('')));
+  const [subsGridB, setSubsGridB] = useState<string[][]>(Array.from({length: 8}, () => Array(5).fill('')));
+  const [subsGridA2, setSubsGridA2] = useState<string[][]>(Array.from({length: 8}, () => Array(5).fill('')));
+  const [subsGridB2, setSubsGridB2] = useState<string[][]>(Array.from({length: 8}, () => Array(5).fill('')));
   
   const [faultsA1, setFaultsA1] = useState(0);
   const [faultsA2, setFaultsA2] = useState(0);
@@ -71,13 +87,36 @@ export default function App() {
   const [activeSubPeriod, setActiveSubPeriod] = useState<1 | 2>(1);
 
   // Histórico & Agendados
-  const [historico, setHistorico] = useState<any[]>([]);
+  interface HistoricoItem {
+    id: number;
+    data: string;
+    teamA: string;
+    teamB: string;
+    golsA: number;
+    golsB: number;
+    extraA: number;
+    extraB: number;
+    penA: number;
+    penB: number;
+    comp: string;
+    gym: string;
+    status: string;
+    arb: string;
+  }
+  const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const [histSearch, setHistSearch] = useState('');
-  const [agendados, setAgendados] = useState<any[]>([]);
+  
+  interface AgendadoItem {
+    id: number;
+    title: string;
+    url: string;
+    date: string;
+  }
+  const [agendados, setAgendados] = useState<AgendadoItem[]>([]);
 
   // Import Modal
   const [importModal, setImportModal] = useState<{isOpen: boolean, team: 'a'|'b'}>({isOpen: false, team: 'a'});
-  const [importData, setImportData] = useState<{headers: string[], rows: any[][]}|null>(null);
+  const [importData, setImportData] = useState<{headers: string[], rows: string[][]}|null>(null);
   const [colMap, setColMap] = useState({num: '', name: '', pos: ''});
   const [importStatus, setImportStatus] = useState({msg: '', type: ''});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -103,8 +142,12 @@ export default function App() {
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
       }
-    } catch (err: any) {
-      setAuthError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setAuthError(err.message);
+      } else {
+        setAuthError('Ocorreu um erro desconhecido');
+      }
     }
   };
 
@@ -141,10 +184,10 @@ export default function App() {
     }
 
     setPlayersA(freshA); setPlayersB(freshB);
-    setSubsGridA(Array.from({length: 15}, () => Array(5).fill('')));
-    setSubsGridB(Array.from({length: 15}, () => Array(5).fill('')));
-    setSubsGridA2(Array.from({length: 15}, () => Array(5).fill('')));
-    setSubsGridB2(Array.from({length: 15}, () => Array(5).fill('')));
+    setSubsGridA(Array.from({length: 8}, () => Array(5).fill('')));
+    setSubsGridB(Array.from({length: 8}, () => Array(5).fill('')));
+    setSubsGridA2(Array.from({length: 8}, () => Array(5).fill('')));
+    setSubsGridB2(Array.from({length: 8}, () => Array(5).fill('')));
     setGoalsA([]); setGoalsB([]);
     setFaultsA1(0); setFaultsA2(0); setFaultsB1(0); setFaultsB2(0);
     setSumula(s => ({ ...s, scoreA: 0, scoreB: 0 }));
@@ -155,7 +198,10 @@ export default function App() {
     // eslint-disable-next-line
     setIsMounted(true);
     const savedConfig = localStorage.getItem('pt_config');
-    if (savedConfig) setConfig(JSON.parse(savedConfig));
+    if (savedConfig) {
+      const parsed = JSON.parse(savedConfig);
+      setConfig({ ...parsed, competitions: parsed.competitions || [] });
+    }
     const savedHist = localStorage.getItem('pt_historico');
     if (savedHist) setHistorico(JSON.parse(savedHist));
     const savedAgendados = localStorage.getItem('pt_agendados');
@@ -267,15 +313,6 @@ export default function App() {
     goTab('tab-sumula');
   };
 
-  const salvarAgendado = () => {
-    if (!generatedUrl) return;
-    const nomeJogo = `${gameData.teamA || 'Equipe A'} vs ${gameData.teamB || 'Equipe B'} - ${gameData.comp || 'Amistoso'}`;
-    const newAgendados = [{ id: Date.now(), title: nomeJogo, url: generatedUrl, date: gameData.date || new Date().toISOString().slice(0, 10) }, ...agendados];
-    setAgendados(newAgendados);
-    localStorage.setItem('pt_agendados', JSON.stringify(newAgendados));
-    alert('Link da súmula foi agendado!');
-    advanceGameNum();
-  };
   const openDemoSumula = () => {
     setGameData({
       comp: 'Supercopa de Futsal', cat: 'Adulto / Masculino', num: '02', group: 'B', fase: '1ª Fase - Grupo B',
@@ -292,7 +329,7 @@ export default function App() {
     const setList = team === 'a' ? setPlayersA : setPlayersB;
     setList([...list, { id: Date.now() + Math.random(), num: '', name: '', y: false, r: false, role: '' }]);
   };
-  const updatePlayer = (team: 'a'|'b', id: number, field: string, val: any) => {
+  const updatePlayer = (team: 'a'|'b', id: number, field: string, val: string | boolean) => {
     const setList = team === 'a' ? setPlayersA : setPlayersB;
     setList(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p));
   };
@@ -327,7 +364,7 @@ export default function App() {
   };
 
   const handleTimeChange = (val: string) => {
-    let v = val.replace(/[^\d:]/g, '');
+    const v = val.replace(/[^\d:]/g, '');
     const parts = v.split(':');
     if (parts.length > 2) {
       return parts.slice(0, 2).join(':');
@@ -360,9 +397,10 @@ export default function App() {
     }
   };
 
-  const updateSubsGrid = (team: 'a'|'b', rIdx: number, cIdx: number, val: string) => {
+  const updateSubsGrid = (team: 'a'|'b', rIdx: number, cIdx: number, val: string, period?: 1 | 2) => {
+    const p = period || activeSubPeriod;
     if (team === 'a') {
-      const setter = activeSubPeriod === 1 ? setSubsGridA : setSubsGridA2;
+      const setter = p === 1 ? setSubsGridA : setSubsGridA2;
       setter(prev => {
         const next = [...prev];
         next[rIdx] = [...next[rIdx]];
@@ -370,7 +408,7 @@ export default function App() {
         return next;
       });
     } else {
-      const setter = activeSubPeriod === 1 ? setSubsGridB : setSubsGridB2;
+      const setter = p === 1 ? setSubsGridB : setSubsGridB2;
       setter(prev => {
         const next = [...prev];
         next[rIdx] = [...next[rIdx]];
@@ -388,6 +426,8 @@ export default function App() {
       teamA: gameData.teamA || 'Equipe A',
       teamB: gameData.teamB || 'Equipe B',
       golsA: sumula.scoreA, golsB: sumula.scoreB,
+      extraA: sumula.scoreExtraA, extraB: sumula.scoreExtraB,
+      penA: sumula.scorePenA, penB: sumula.scorePenB,
       comp: gameData.comp || '—', gym: gameData.gym || '—',
       status: 'Registrada', arb: sumula.arb1 || '—'
     };
@@ -421,17 +461,19 @@ export default function App() {
           const data = new Uint8Array(ev.target?.result as ArrayBuffer);
           const wb = XLSX.read(data, { type: 'array' });
           const ws = wb.Sheets[wb.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, defval: '' });
+          const rows = XLSX.utils.sheet_to_json<string[][]>(ws, { header: 1, defval: '' });
           processParsed(file.name, rows);
-        } catch (err: any) {
-          setImportStatus({msg: 'Erro: ' + err.message, type: 'err'});
+        } catch (err: unknown) {
+          if (err instanceof Error) {
+            setImportStatus({msg: 'Erro: ' + err.message, type: 'err'});
+          }
         }
       };
       reader.readAsArrayBuffer(file);
     }
   };
 
-  const processParsed = (name: string, rows: any[][]) => {
+  const processParsed = (name: string, rows: string[][]) => {
     if(!rows || rows.length < 2) { setImportStatus({msg: 'Arquivo vazio ou sem registros', type: 'err'}); return; }
     const headers = rows[0].map((h, i) => h ? String(h).trim() : `Col ${i+1}`);
     const dataRows = rows.slice(1).filter(r => r.some(c => !!c));
@@ -541,6 +583,10 @@ export default function App() {
     <div className="app-shell">
       <datalist id="categorias-list">
         {categoriasMenu.map(c => <option key={c} value={c} />)}
+      </datalist>
+
+      <datalist id="competitions-list">
+        {config.competitions.map(c => <option key={c} value={c} />)}
       </datalist>
 
       <datalist id="fases-list">
@@ -668,13 +714,63 @@ export default function App() {
         </div>
         <nav className="sidebar-nav">
           <div className="nav-section-label">Principal</div>
-          <div className={`nav-item ${activeTab==='tab-home'?'active':''}`} onClick={()=>goTab('tab-home')}><span className="nav-icon">🏠</span> Início</div>
-          <div className={`nav-item ${activeTab==='tab-gerar'?'active':''}`} onClick={()=>goTab('tab-gerar')}><span className="nav-icon">🔗</span> Gerar Súmula</div>
-          <div className={`nav-item ${activeTab==='tab-sumula'?'active':''}`} onClick={()=>goTab('tab-sumula')}><span className="nav-icon">📋</span> Preencher Súmula</div>
+          <div className={`nav-item ${activeTab==='tab-home'?'active':''}`} onClick={()=>goTab('tab-home')}><Home className="nav-icon" size={18} /> Início</div>
+          <div className={`nav-item ${activeTab==='tab-gerar'?'active':''}`} onClick={()=>goTab('tab-gerar')}><LinkIcon className="nav-icon" size={18} /> Gerar Súmula</div>
+          <div className={`nav-item ${activeTab==='tab-sumula'?'active':''}`} onClick={()=>goTab('tab-sumula')}><FileText className="nav-icon" size={18} /> Preencher Súmula</div>
+          
           <div className="nav-section-label">Gestão</div>
-          <div className={`nav-item ${activeTab==='tab-agendados'?'active':''}`} onClick={()=>goTab('tab-agendados')}><span className="nav-icon">📅</span> Jogos Agendados<span className="nav-badge">{agendados.length}</span></div>
-          <div className={`nav-item ${activeTab==='tab-hist'?'active':''}`} onClick={()=>goTab('tab-hist')}><span className="nav-icon">📁</span> Histórico<span className="nav-badge">{historico.length}</span></div>
-          <div className={`nav-item ${activeTab==='tab-config'?'active':''}`} onClick={()=>goTab('tab-config')}><span className="nav-icon">⚙️</span> Configurações</div>
+          <div className={`nav-item ${activeTab==='tab-agendados'?'active':''}`} onClick={()=>goTab('tab-agendados')}><Calendar className="nav-icon" size={18} /> Jogos Agendados<span className="nav-badge">{agendados.length}</span></div>
+          <div className={`nav-item ${activeTab==='tab-hist'?'active':''}`} onClick={()=>goTab('tab-hist')}><History className="nav-icon" size={18} /> Histórico<span className="nav-badge">{historico.length}</span></div>
+          <div className={`nav-item ${activeTab==='tab-config'?'active':''}`} onClick={()=>goTab('tab-config')}><Settings className="nav-icon" size={18} /> Configurações</div>
+
+          <div className="nav-section-label">Competições</div>
+          <div className="px-3 mb-2">
+            <div className="flex gap-1">
+              <input 
+                className="inp text-[0.7rem] py-1 h-8" 
+                placeholder="Nova Competição..." 
+                value={newCompName} 
+                onChange={e => setNewCompName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newCompName.trim()) {
+                    const updatedComps = [...config.competitions, newCompName.trim()];
+                    const newConfig = { ...config, competitions: updatedComps };
+                    setConfig(newConfig);
+                    localStorage.setItem('pt_config', JSON.stringify(newConfig));
+                    setNewCompName('');
+                  }
+                }}
+              />
+              <button 
+                className="btn btn-primary p-1 w-8 h-8 flex items-center justify-center shrink-0"
+                onClick={() => {
+                  if (newCompName.trim()) {
+                    const updatedComps = [...config.competitions, newCompName.trim()];
+                    const newConfig = { ...config, competitions: updatedComps };
+                    setConfig(newConfig);
+                    localStorage.setItem('pt_config', JSON.stringify(newConfig));
+                    setNewCompName('');
+                  }
+                }}
+              >+</button>
+            </div>
+          </div>
+          <div className="max-h-[150px] overflow-y-auto px-3 custom-scrollbar">
+            {config.competitions.map((c, i) => (
+              <div key={i} className="flex items-center justify-between group py-1 text-[0.7rem] text-[var(--sub)] hover:text-white transition-colors">
+                <span className="truncate pr-2">🏆 {c}</span>
+                <button 
+                  className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all"
+                  onClick={() => {
+                    const updatedComps = config.competitions.filter((_, idx) => idx !== i);
+                    const newConfig = { ...config, competitions: updatedComps };
+                    setConfig(newConfig);
+                    localStorage.setItem('pt_config', JSON.stringify(newConfig));
+                  }}
+                >✕</button>
+              </div>
+            ))}
+          </div>
         </nav>
         <div className="sidebar-footer">FEFUSPA © 2024<br/>Versão 1.0.0</div>
       </aside>
@@ -701,7 +797,7 @@ export default function App() {
             <h1 className="home-title">SÚMULA<br/><em>DIGITAL</em><br/><span>FEFUSPA</span></h1>
             <p className="home-sub">Gerencie súmulas de futsal online, gere links exclusivos por partida e registre tudo de forma digital — sem papel, sem complicação.</p>
             <div className="home-actions">
-              <button className="btn btn-primary" onClick={() => goTab('tab-gerar')}>⚡ Gerar Link de Súmula</button>
+              <button className="btn btn-primary" onClick={() => goTab('tab-gerar')}><Zap className="mr-2" size={18} /> Gerar Link de Súmula</button>
               <button className="btn btn-ghost" onClick={openDemoSumula}>👁 Ver Demonstração</button>
             </div>
           </div>
@@ -714,18 +810,18 @@ export default function App() {
           <div className="features-section">
             <div className="section-head"><h2>Funcionalidades</h2></div>
             <div className="features-grid">
-              <div className="feat-card"><div className="feat-icon">🔗</div><div className="feat-title">Link Único por Jogo</div><div className="feat-desc">URL exclusiva com dados pré-preenchidos para facilitar o trabalho da mesa.</div></div>
-              <div className="feat-card"><div className="feat-icon">📋</div><div className="feat-title">Padrão CBFS</div><div className="feat-desc">Todos os campos seguem o modelo oficial da confederação.</div></div>
-              <div className="feat-card"><div className="feat-icon">⚽</div><div className="feat-title">Gols em Tempo Real</div><div className="feat-desc">Registre gols com autor, período e minuto instantaneamente.</div></div>
-              <div className="feat-card"><div className="feat-icon">📱</div><div className="feat-title">Mobile First</div><div className="feat-desc">Interface adaptada para tablets e celulares.</div></div>
+              <div className="feat-card"><div className="feat-icon"><LinkIcon size={24} /></div><div className="feat-title">Link Único por Jogo</div><div className="feat-desc">URL exclusiva com dados pré-preenchidos para facilitar o trabalho da mesa.</div></div>
+              <div className="feat-card"><div className="feat-icon"><FileText size={24} /></div><div className="feat-title">Padrão CBFS</div><div className="feat-desc">Todos os campos seguem o modelo oficial da confederação.</div></div>
+              <div className="feat-card"><div className="feat-icon"><Target size={24} /></div><div className="feat-title">Gols em Tempo Real</div><div className="feat-desc">Registre gols com autor, período e minuto instantaneamente.</div></div>
+              <div className="feat-card"><div className="feat-icon"><Smartphone size={24} /></div><div className="feat-title">Mobile First</div><div className="feat-desc">Interface adaptada para tablets e celulares.</div></div>
             </div>
           </div>
           <div style={{padding:'0 2.5rem'}}><div className="section-head"><h2>Ações Rápidas</h2></div></div>
           <div className="quick-actions">
-             <div className="quick-card" onClick={() => goTab('tab-gerar')}><div className="quick-card-icon">🔗</div><div className="quick-card-title">Gerar Link de Súmula</div><div className="quick-card-desc">Crie um link fácil para o mesário preencher na hora.</div></div>
-             <div className="quick-card" onClick={openDemoSumula}><div className="quick-card-icon">📝</div><div className="quick-card-title">Preencher Súmula Demo</div><div className="quick-card-desc">Faça um test-drive em uma súmula já pronta.</div></div>
-             <div className="quick-card" onClick={() => goTab('tab-hist')}><div className="quick-card-icon">📁</div><div className="quick-card-title">Ver Histórico</div><div className="quick-card-desc">Exporte ou acesse todas as súmulas processadas.</div></div>
-             <div className="quick-card" onClick={() => goTab('tab-config')}><div className="quick-card-icon">⚙️</div><div className="quick-card-title">Configurações</div><div className="quick-card-desc">Ajuste regras padrão, clube ou preferências do sistema.</div></div>
+             <div className="quick-card" onClick={() => goTab('tab-gerar')}><div className="quick-card-icon"><LinkIcon size={20} /></div><div className="quick-card-title">Gerar Link de Súmula</div><div className="quick-card-desc">Crie um link fácil para o mesário preencher na hora.</div></div>
+             <div className="quick-card" onClick={openDemoSumula}><div className="quick-card-icon"><FileText size={20} /></div><div className="quick-card-title">Preencher Súmula Demo</div><div className="quick-card-desc">Faça um test-drive em uma súmula já pronta.</div></div>
+             <div className="quick-card" onClick={() => goTab('tab-hist')}><div className="quick-card-icon"><History size={20} /></div><div className="quick-card-title">Ver Histórico</div><div className="quick-card-desc">Exporte ou acesse todas as súmulas processadas.</div></div>
+             <div className="quick-card" onClick={() => goTab('tab-config')}><div className="quick-card-icon"><Settings size={20} /></div><div className="quick-card-title">Configurações</div><div className="quick-card-desc">Ajuste regras padrão, clube ou preferências do sistema.</div></div>
           </div>
         </div>
 
@@ -738,9 +834,11 @@ export default function App() {
             </div>
             
             <div className="form-card">
-              <div className="form-card-title">🏆 Competição</div>
+              <div className="form-card-title"><Target className="mr-2 inline" size={18} /> Competição</div>
               <div className="form-row border-b border-white/5 pb-4 mb-4">
-                <div className="form-group"><label>Competição</label><input className="inp" value={gameData.comp} onChange={e=>setGameData({...gameData,comp:e.target.value})} placeholder="Ex.: Supercopa de Futsal" /></div>
+                <div className="form-group"><label>Competição</label>
+                  <input list="competitions-list" className="inp" value={gameData.comp} onChange={e=>setGameData({...gameData,comp:e.target.value})} placeholder="Selecione ou digite..." />
+                </div>
                 <div className="form-group"><label>Categoria</label>
                   <input list="categorias-list" className="inp" value={gameData.cat} onChange={e=>setGameData({...gameData,cat:e.target.value})} placeholder="Selecione ou digite..." />
                 </div>
@@ -762,14 +860,14 @@ export default function App() {
                 <div className="form-group">
                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:'4px'}}>
                     <label style={{marginBottom:0}}>Escalação {gameData.teamA || 'Equipe A'} (Opcional)</label>
-                    <button type="button" className="btn-import btn-sm" style={{padding:'2px 8px', fontSize:'0.7rem', height:'auto'}} onClick={() => setImportModal({isOpen: true, team:'a'})}>📥 XLXS</button>
+                    <button type="button" className="btn-import btn-sm" style={{padding:'2px 8px', fontSize:'0.7rem', height:'auto'}} onClick={() => setImportModal({isOpen: true, team:'a'})}><Download size={12} className="mr-1" /> EXCEL/CSV</button>
                   </div>
                   <textarea className="inp" style={{minHeight:'100px', resize: 'vertical'}} placeholder="Cole os nomes dos jogadores...&#10;(Um jogador por linha)" value={gameData.rosterA} onChange={e=>setGameData({...gameData,rosterA:e.target.value})} />
                 </div>
                 <div className="form-group">
                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:'4px'}}>
                     <label style={{marginBottom:0}}>Escalação {gameData.teamB || 'Equipe B'} (Opcional)</label>
-                    <button type="button" className="btn-import btn-sm" style={{padding:'2px 8px', fontSize:'0.7rem', height:'auto'}} onClick={() => setImportModal({isOpen: true, team:'b'})}>📥 XLXS</button>
+                    <button type="button" className="btn-import btn-sm" style={{padding:'2px 8px', fontSize:'0.7rem', height:'auto'}} onClick={() => setImportModal({isOpen: true, team:'b'})}><Download size={12} className="mr-1" /> EXCEL/CSV</button>
                   </div>
                   <textarea className="inp" style={{minHeight:'100px', resize: 'vertical'}} placeholder="Cole os nomes dos jogadores...&#10;(Um jogador por linha)" value={gameData.rosterB} onChange={e=>setGameData({...gameData,rosterB:e.target.value})} />
                 </div>
@@ -809,10 +907,10 @@ export default function App() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
               <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',fontSize:'.95rem',padding:'.85rem'}} onClick={gerarLink}>
-                ⚡ Gerar Link de Súmula
+                <Zap className="mr-2" size={20} /> Gerar Link de Súmula
               </button>
               <button className="btn btn-ghost" style={{width:'100%',justifyContent:'center',fontSize:'.95rem',padding:'.85rem', borderColor:'var(--border)'}} onClick={gerarESalvarAgendado}>
-                📅 Salvar nos Jogos Agendados
+                <Calendar className="mr-2" size={20} /> Salvar nos Jogos Agendados
               </button>
             </div>
 
@@ -876,7 +974,9 @@ export default function App() {
                <div className="step-content active">
                  <div className="sec-title">📋 Identificação do Jogo</div>
                  <div className="info-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-                   <div className="form-group"><label>Competição</label><input className="inp" value={gameData.comp} onChange={(e)=>setGameData({...gameData,comp:e.target.value})} /></div>
+                   <div className="form-group"><label>Competição</label>
+                    <input list="competitions-list" className="inp" value={gameData.comp} onChange={(e)=>setGameData({...gameData,comp:e.target.value})} placeholder="Selecione ou digite..." />
+                  </div>
                    <div className="form-group">
                      <label>Categoria</label>
                      <input list="categorias-list" className="inp" value={gameData.cat} onChange={e=>setGameData({...gameData,cat:e.target.value})} placeholder="Selecione ou digite..." />
@@ -1005,82 +1105,187 @@ export default function App() {
                   <div className="sec-title">🔄 Substituições</div>
                   
                   {/* Period Switcher */}
-                  <div className="flex gap-2 mb-6 p-1 bg-white/5 rounded-xl max-w-md mx-auto">
+                  <div className="flex mb-6 p-1 bg-white/5 rounded-xl max-w-md mx-auto border border-white/10">
                     <button 
-                      className={`flex-1 py-3 font-bold transition-all rounded-lg flex items-center justify-center gap-2 ${activeSubPeriod === 1 ? 'bg-[#38bdf8] text-white shadow-[0_0_15px_rgba(56,189,248,0.3)]' : 'text-white/40 hover:bg-white/10'}`}
+                      className={`flex-1 py-3 font-bold transition-all rounded-lg flex items-center justify-center gap-2 ${activeSubPeriod === 1 ? 'bg-white/10 text-[#38bdf8] border border-[#38bdf8]/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'text-white/40 hover:text-white/60'}`}
                       onClick={() => setActiveSubPeriod(1)}
                     >
-                      <div className={`w-2 h-2 rounded-full ${activeSubPeriod === 1 ? 'bg-white' : 'bg-[#38bdf8]'}`}></div>
-                      PRIMEIRO TEMPO
+                      <div className={`w-2 h-2 rounded-full ${activeSubPeriod === 1 ? 'bg-[#38bdf8]' : 'bg-transparent border border-white/20'}`}></div>
+                      1º TEMPO
                     </button>
                     <button 
-                      className={`flex-1 py-3 font-bold transition-all rounded-lg flex items-center justify-center gap-2 ${activeSubPeriod === 2 ? 'bg-[#ef4444] text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'text-white/40 hover:bg-white/10'}`}
+                      className={`flex-1 py-3 font-bold transition-all rounded-lg flex items-center justify-center gap-2 ${activeSubPeriod === 2 ? 'bg-white/10 text-[#ef4444] border border-[#ef4444]/30 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'text-white/40 hover:text-white/60'}`}
                       onClick={() => setActiveSubPeriod(2)}
                     >
-                      <div className={`w-2 h-2 rounded-full ${activeSubPeriod === 2 ? 'bg-white' : 'bg-[#ef4444]'}`}></div>
-                      SEGUNDO TEMPO
+                      <div className={`w-2 h-2 rounded-full ${activeSubPeriod === 2 ? 'bg-[#ef4444]' : 'bg-transparent border border-white/20'}`}></div>
+                      2º TEMPO
                     </button>
                   </div>
 
                   <div className="goals-grid" style={{gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)'}}>
-                    <div>
+                    {/* TEAM A */}
+                    <div className="flex flex-col gap-6">
                       <div className="goals-label" style={{color:'var(--sky)'}}>{gameData.teamA||'EQUIPE A'}</div>
-                      <div className="text-[0.65rem] text-white/40 mb-2 uppercase tracking-wide">Números (Substituições {activeSubPeriod}º T)</div>
-                      <div className="grid gap-1">
-                        {(activeSubPeriod === 1 ? subsGridA : subsGridA2).map((row, rIdx) => (
-                           <div key={rIdx} className="flex flex-col gap-1">
-                             <div className="flex gap-1">
-                               {row.map((val, cIdx) => (
-                                 <input 
-                                   key={cIdx} 
-                                   className="goal-min text-center bg-white/5 border border-white/10" 
-                                   style={{
-                                     flex: 1, 
-                                     padding: '0.4rem', 
-                                     minWidth: 0, 
-                                     borderRadius: '4px',
-                                     color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444',
-                                     fontWeight: 'bold'
-                                   }} 
-                                   maxLength={2} 
-                                   inputMode="numeric" 
-                                   value={val} 
-                                   onChange={e=>updateSubsGrid('a', rIdx, cIdx, e.target.value.replace(/\D/g, ''))} 
-                                 />
-                               ))}
+                      
+                      {/* 1st Half Team A */}
+                      <div>
+                        <div className="text-[0.65rem] text-[#38bdf8] mb-2 uppercase tracking-wide font-bold">Substituições 1º Tempo</div>
+                        <div className="grid gap-1">
+                          {subsGridA.map((row, rIdx) => (
+                             <div key={rIdx} className="flex flex-col gap-1">
+                               <div className="flex gap-1">
+                                 {row.map((val, cIdx) => {
+                                   const pName = playersA.find(p => p.num === val)?.name;
+                                   return (
+                                     <div key={cIdx} className="flex flex-col flex-1 min-w-0">
+                                       <input 
+                                         className="goal-min text-center bg-white/10 border border-white/20 w-full" 
+                                         style={{
+                                           padding: '0.4rem', 
+                                           minWidth: 0, 
+                                           borderRadius: '4px',
+                                           color: 'black',
+                                           fontWeight: 'bold'
+                                         }} 
+                                         maxLength={2} 
+                                         inputMode="numeric" 
+                                         value={val} 
+                                         onChange={e=>updateSubsGrid('a', rIdx, cIdx, e.target.value.replace(/\D/g, ''), 1)} 
+                                       />
+                                       {val && (
+                                         <div className="text-[0.45rem] text-black truncate text-center mt-0.5 uppercase font-medium" title={pName}>
+                                           {pName ? pName.split(' ')[0] : '—'}
+                                         </div>
+                                       )}
+                                     </div>
+                                   );
+                                 })}
+                               </div>
                              </div>
-                           </div>
-                        ))}
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 2nd Half Team A */}
+                      <div>
+                        <div className="text-[0.65rem] text-[#ef4444] mb-2 uppercase tracking-wide font-bold">Substituições 2º Tempo</div>
+                        <div className="grid gap-1">
+                          {subsGridA2.map((row, rIdx) => (
+                             <div key={rIdx} className="flex flex-col gap-1">
+                               <div className="flex gap-1">
+                                 {row.map((val, cIdx) => {
+                                   const pName = playersA.find(p => p.num === val)?.name;
+                                   return (
+                                     <div key={cIdx} className="flex flex-col flex-1 min-w-0">
+                                       <input 
+                                         className="goal-min text-center bg-white/10 border border-white/20 w-full" 
+                                         style={{
+                                           padding: '0.4rem', 
+                                           minWidth: 0, 
+                                           borderRadius: '4px',
+                                           color: '#ef4444',
+                                           fontWeight: 'bold'
+                                         }} 
+                                         maxLength={2} 
+                                         inputMode="numeric" 
+                                         value={val} 
+                                         onChange={e=>updateSubsGrid('a', rIdx, cIdx, e.target.value.replace(/\D/g, ''), 2)} 
+                                       />
+                                       {val && (
+                                         <div className="text-[0.45rem] text-[#ef4444] truncate text-center mt-0.5 uppercase font-medium" title={pName}>
+                                           {pName ? pName.split(' ')[0] : '—'}
+                                         </div>
+                                       )}
+                                     </div>
+                                   );
+                                 })}
+                               </div>
+                             </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                    <div>
+
+                    {/* TEAM B */}
+                    <div className="flex flex-col gap-6">
                       <div className="goals-label" style={{color:'var(--yellow)'}}>{gameData.teamB||'EQUIPE B'}</div>
-                      <div className="text-[0.65rem] text-white/40 mb-2 uppercase tracking-wide">Números (Substituições {activeSubPeriod}º T)</div>
-                      <div className="grid gap-1">
-                        {(activeSubPeriod === 1 ? subsGridB : subsGridB2).map((row, rIdx) => (
-                           <div key={rIdx} className="flex flex-col gap-1">
-                             <div className="flex gap-1">
-                               {row.map((val, cIdx) => (
-                                 <input 
-                                   key={cIdx} 
-                                   className="goal-min text-center bg-white/5 border border-white/10" 
-                                   style={{
-                                     flex: 1, 
-                                     padding: '0.4rem', 
-                                     minWidth: 0, 
-                                     borderRadius: '4px',
-                                     color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444',
-                                     fontWeight: 'bold'
-                                   }} 
-                                   maxLength={2} 
-                                   inputMode="numeric" 
-                                   value={val} 
-                                   onChange={e=>updateSubsGrid('b', rIdx, cIdx, e.target.value.replace(/\D/g, ''))} 
-                                 />
-                               ))}
+                      
+                      {/* 1st Half Team B */}
+                      <div>
+                        <div className="text-[0.65rem] text-[#38bdf8] mb-2 uppercase tracking-wide font-bold">Substituições 1º Tempo</div>
+                        <div className="grid gap-1">
+                          {subsGridB.map((row, rIdx) => (
+                             <div key={rIdx} className="flex flex-col gap-1">
+                               <div className="flex gap-1">
+                                 {row.map((val, cIdx) => {
+                                   const pName = playersB.find(p => p.num === val)?.name;
+                                   return (
+                                     <div key={cIdx} className="flex flex-col flex-1 min-w-0">
+                                       <input 
+                                         className="goal-min text-center bg-white/10 border border-white/20 w-full" 
+                                         style={{
+                                           padding: '0.4rem', 
+                                           minWidth: 0, 
+                                           borderRadius: '4px',
+                                           color: 'black',
+                                           fontWeight: 'bold'
+                                         }} 
+                                         maxLength={2} 
+                                         inputMode="numeric" 
+                                         value={val} 
+                                         onChange={e=>updateSubsGrid('b', rIdx, cIdx, e.target.value.replace(/\D/g, ''), 1)} 
+                                       />
+                                       {val && (
+                                         <div className="text-[0.45rem] text-black truncate text-center mt-0.5 uppercase font-medium" title={pName}>
+                                           {pName ? pName.split(' ')[0] : '—'}
+                                         </div>
+                                       )}
+                                     </div>
+                                   );
+                                 })}
+                               </div>
                              </div>
-                           </div>
-                        ))}
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 2nd Half Team B */}
+                      <div>
+                        <div className="text-[0.65rem] text-[#ef4444] mb-2 uppercase tracking-wide font-bold">Substituições 2º Tempo</div>
+                        <div className="grid gap-1">
+                          {subsGridB2.map((row, rIdx) => (
+                             <div key={rIdx} className="flex flex-col gap-1">
+                               <div className="flex gap-1">
+                                 {row.map((val, cIdx) => {
+                                   const pName = playersB.find(p => p.num === val)?.name;
+                                   return (
+                                     <div key={cIdx} className="flex flex-col flex-1 min-w-0">
+                                       <input 
+                                         className="goal-min text-center bg-white/10 border border-white/20 w-full" 
+                                         style={{
+                                           padding: '0.4rem', 
+                                           minWidth: 0, 
+                                           borderRadius: '4px',
+                                           color: '#ef4444',
+                                           fontWeight: 'bold'
+                                         }} 
+                                         maxLength={2} 
+                                         inputMode="numeric" 
+                                         value={val} 
+                                         onChange={e=>updateSubsGrid('b', rIdx, cIdx, e.target.value.replace(/\D/g, ''), 2)} 
+                                       />
+                                       {val && (
+                                         <div className="text-[0.45rem] text-[#ef4444] truncate text-center mt-0.5 uppercase font-medium" title={pName}>
+                                           {pName ? pName.split(' ')[0] : '—'}
+                                         </div>
+                                       )}
+                                     </div>
+                                   );
+                                 })}
+                               </div>
+                             </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1100,10 +1305,10 @@ export default function App() {
                      {goalsA.map(g => (
                        <div className="goal-entry" key={g.id}>
                          <span style={{fontSize:'0.9rem'}}>⚽</span>
-                         <select 
-                           style={{ flex: 1, background: 'transparent', color: 'white', border: 'none', outline: 'none' }}
-                           value={g.name} 
-                           onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,name:e.target.value}:x))}
+                          <select 
+                            style={{ flex: 1, background: 'transparent', color: 'black', border: 'none', outline: 'none' }}
+                            value={g.name} 
+                            onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,name:e.target.value}:x))}
                          >
                            <option value="" style={{color:'black'}}>👤 Selecionar Atleta...</option>
                            {playersA.map(p => (
@@ -1116,7 +1321,7 @@ export default function App() {
                          <select value={g.period} onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,period:e.target.value}:x))}>
                            <option>1º Per.</option><option>2º Per.</option><option>Prorrog.</option>
                          </select>
-                         <input className="goal-min" value={g.min} maxLength={5} inputMode="numeric" onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,min:handleTimeChange(e.target.value)}:x))} placeholder="min:seg" />
+                         <input className="goal-min" style={g.period === '2º Per.' ? {color:'#ef4444', borderColor:'#ef4444'} : {}} value={g.min} maxLength={5} inputMode="numeric" onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,min:handleTimeChange(e.target.value)}:x))} placeholder="min:seg" />
                          <span className="goal-del" onClick={()=>removeGoal('a', g.id)}>✕</span>
                        </div>
                      ))}
@@ -1127,10 +1332,10 @@ export default function App() {
                      {goalsB.map(g => (
                        <div className="goal-entry" key={g.id}>
                          <span style={{fontSize:'0.9rem'}}>⚽</span>
-                         <select 
-                           style={{ flex: 1, background: 'transparent', color: 'white', border: 'none', outline: 'none' }}
-                           value={g.name} 
-                           onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,name:e.target.value}:x))}
+                          <select 
+                            style={{ flex: 1, background: 'transparent', color: 'black', border: 'none', outline: 'none' }}
+                            value={g.name} 
+                            onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,name:e.target.value}:x))}
                          >
                            <option value="" style={{color:'black'}}>👤 Selecionar Atleta...</option>
                            {playersB.map(p => (
@@ -1143,7 +1348,7 @@ export default function App() {
                          <select value={g.period} onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,period:e.target.value}:x))}>
                            <option>1º Per.</option><option>2º Per.</option><option>Prorrog.</option>
                          </select>
-                         <input className="goal-min" value={g.min} maxLength={5} inputMode="numeric" onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,min:handleTimeChange(e.target.value)}:x))} placeholder="min:seg" />
+                         <input className="goal-min" style={g.period === '2º Per.' ? {color:'#ef4444', borderColor:'#ef4444'} : {}} value={g.min} maxLength={5} inputMode="numeric" onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,min:handleTimeChange(e.target.value)}:x))} placeholder="min:seg" />
                          <span className="goal-del" onClick={()=>removeGoal('b', g.id)}>✕</span>
                        </div>
                      ))}
@@ -1154,7 +1359,7 @@ export default function App() {
                  <div className="sec-title mt-8">⛔ Faltas Acumuladas</div>
                  <div className="teams-grid">
                    <div className="team-panel" style={{padding:'1rem'}}>
-                     <div style={{fontSize:'.72rem',color:'var(--sub)',marginBottom:'.45rem'}}>1º Período — {gameData.teamA}</div>
+                     <div style={{fontSize:'.72rem',color:'#38bdf8',marginBottom:'.45rem',fontWeight:'bold'}}>1º Período — {gameData.teamA}</div>
                      <div className="faults-display">
                        {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsA1>=n ? (n>=6?'crit':'on'):''}`} onClick={()=>setFaultsA1(n === faultsA1 ? n-1 : n)}>{n}</button>)}
                      </div>
@@ -1163,17 +1368,17 @@ export default function App() {
                        <input className="goal-min bg-white/5 border border-white/10 text-center w-16" maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeA1} onChange={e=>setSumula({...sumula, timeA1:handleTimeChange(e.target.value)})} />
                      </div>
 
-                     <div style={{fontSize:'.72rem',color:'var(--sub)',margin:'.75rem 0 .45rem'}}>2º Período — {gameData.teamA}</div>
+                     <div style={{fontSize:'.72rem',color:'#ef4444',margin:'.75rem 0 .45rem',fontWeight:'bold'}}>2º Período — {gameData.teamA}</div>
                      <div className="faults-display">
-                       {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsA2>=n ? (n>=6?'crit':'on'):''}`} onClick={()=>setFaultsA2(n === faultsA2 ? n-1 : n)}>{n}</button>)}
+                       {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsA2>=n ? (n>=6?'crit':'on'):''}`} style={!(faultsA2>=n) ? {color:'#ef4444', borderColor:'rgba(239,68,68,0.3)'} : {}} onClick={()=>setFaultsA2(n === faultsA2 ? n-1 : n)}>{n}</button>)}
                      </div>
                      <div className="mt-2 flex items-center gap-2">
                        <span className="text-[0.7rem] text-white/50">Pedido de Tempo:</span>
-                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeA2} onChange={e=>setSumula({...sumula, timeA2:handleTimeChange(e.target.value)})} />
+                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" style={{color:'#ef4444'}} maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeA2} onChange={e=>setSumula({...sumula, timeA2:handleTimeChange(e.target.value)})} />
                      </div>
                    </div>
                    <div className="team-panel" style={{padding:'1rem'}}>
-                     <div style={{fontSize:'.72rem',color:'var(--sub)',marginBottom:'.45rem'}}>1º Período — {gameData.teamB}</div>
+                     <div style={{fontSize:'.72rem',color:'#38bdf8',marginBottom:'.45rem',fontWeight:'bold'}}>1º Período — {gameData.teamB}</div>
                      <div className="faults-display">
                        {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsB1>=n ? (n>=6?'crit':'on'):''}`} onClick={()=>setFaultsB1(n === faultsB1 ? n-1 : n)}>{n}</button>)}
                      </div>
@@ -1182,13 +1387,13 @@ export default function App() {
                        <input className="goal-min bg-white/5 border border-white/10 text-center w-16" maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeB1} onChange={e=>setSumula({...sumula, timeB1:handleTimeChange(e.target.value)})} />
                      </div>
 
-                     <div style={{fontSize:'.72rem',color:'var(--sub)',margin:'.75rem 0 .45rem'}}>2º Período — {gameData.teamB}</div>
+                     <div style={{fontSize:'.72rem',color:'#ef4444',margin:'.75rem 0 .45rem',fontWeight:'bold'}}>2º Período — {gameData.teamB}</div>
                      <div className="faults-display">
-                       {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsB2>=n ? (n>=6?'crit':'on'):''}`} onClick={()=>setFaultsB2(n === faultsB2 ? n-1 : n)}>{n}</button>)}
+                       {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsB2>=n ? (n>=6?'crit':'on'):''}`} style={!(faultsB2>=n) ? {color:'#ef4444', borderColor:'rgba(239,68,68,0.3)'} : {}} onClick={()=>setFaultsB2(n === faultsB2 ? n-1 : n)}>{n}</button>)}
                      </div>
                      <div className="mt-2 flex items-center gap-2">
                        <span className="text-[0.7rem] text-white/50">Pedido de Tempo:</span>
-                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeB2} onChange={e=>setSumula({...sumula, timeB2:handleTimeChange(e.target.value)})} />
+                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" style={{color:'#ef4444'}} maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeB2} onChange={e=>setSumula({...sumula, timeB2:handleTimeChange(e.target.value)})} />
                      </div>
                    </div>
                  </div>
@@ -1256,20 +1461,69 @@ export default function App() {
              {currentStep === 5 && (
                <div className="step-content active">
                  <div className="sec-title">🏆 Resultado Final</div>
-                 <div style={{display:'flex', alignItems:'center', gap:'1.5rem', marginBottom:'2rem', flexWrap:'wrap'}}>
-                   <div className="form-group">
-                     <label>{gameData.teamA}</label>
-                     <input type="number" min="0" className="result-inp" value={sumula.scoreA} onChange={e=>setSumula({...sumula,scoreA:parseInt(e.target.value)||0})} />
-                   </div>
-                   <span className="result-vs">×</span>
-                   <div className="form-group">
-                     <label>{gameData.teamB}</label>
-                     <input type="number" min="0" className="result-inp" value={sumula.scoreB} onChange={e=>setSumula({...sumula,scoreB:parseInt(e.target.value)||0})} />
-                   </div>
+                 <div className="grid gap-6 mb-8 mt-2">
+                    <div className="flex flex-col gap-6">
+                      {/* Tempo Normal */}
+                      <div className="flex items-center gap-6 flex-wrap">
+                        <div className="form-group pb-2 border-b border-white/5 w-full">
+                          <label className="text-[0.6rem] uppercase tracking-wider text-[var(--sub)]">Tempo Normal: {gameData.teamA}</label>
+                          <div className="flex items-center gap-4 mt-1">
+                             <input type="number" min="0" className="result-inp" value={sumula.scoreA} onChange={e=>setSumula({...sumula,scoreA:parseInt(e.target.value)||0})} />
+                             <span className="text-xl opacity-20">×</span>
+                             <input type="number" min="0" className="result-inp" value={sumula.scoreB} onChange={e=>setSumula({...sumula,scoreB:parseInt(e.target.value)||0})} />
+                             <label className="text-[0.6rem] uppercase tracking-wider text-[var(--sub)] ml-auto">{gameData.teamB}</label>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Tempo Extra */}
+                      <div className="flex items-center gap-6 flex-wrap">
+                        <div className="form-group pb-2 border-b border-white/5 w-full">
+                          <label className="text-[0.6rem] uppercase tracking-wider text-[var(--sub)]">Tempo Extra (se houver): {gameData.teamA}</label>
+                          <div className="flex items-center gap-4 mt-1">
+                             <input type="number" min="0" className="result-inp h-10 w-20 text-lg" value={sumula.scoreExtraA} onChange={e=>setSumula({...sumula,scoreExtraA:parseInt(e.target.value)||0})} />
+                             <span className="text-sm opacity-10">×</span>
+                             <input type="number" min="0" className="result-inp h-10 w-20 text-lg" value={sumula.scoreExtraB} onChange={e=>setSumula({...sumula,scoreExtraB:parseInt(e.target.value)||0})} />
+                             <label className="text-[0.6rem] uppercase tracking-wider text-[var(--sub)] ml-auto">{gameData.teamB}</label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Pênaltis */}
+                      <div className="flex items-center gap-6 flex-wrap">
+                        <div className="form-group w-full">
+                          <label className="text-[0.6rem] uppercase tracking-wider text-[#ef4444]">Pênaltis (se houver): {gameData.teamA}</label>
+                          <div className="flex items-center gap-4 mt-1">
+                             <input type="number" min="0" className="result-inp h-10 w-20 text-lg border-[#ef4444]/30" value={sumula.scorePenA} onChange={e=>setSumula({...sumula,scorePenA:parseInt(e.target.value)||0})} />
+                             <span className="text-sm opacity-10">×</span>
+                             <input type="number" min="0" className="result-inp h-10 w-20 text-lg border-[#ef4444]/30" value={sumula.scorePenB} onChange={e=>setSumula({...sumula,scorePenB:parseInt(e.target.value)||0})} />
+                             <label className="text-[0.6rem] uppercase tracking-wider text-[#ef4444] ml-auto">{gameData.teamB}</label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                  </div>
                  <div className="submit-panel">
                    <h3>SÚMULA PRONTA?</h3>
                    <p>Revise todos os dados antes de finalizar. Após a confirmação, a súmula é registrada e um resumo é gerado.</p>
+                   
+                   <div className="flex flex-col gap-2 mb-6 w-full max-w-sm">
+                     <label className="text-[0.7rem] text-[var(--sub)] font-medium uppercase tracking-wider">Vincular Partida à Competição:</label>
+                     <select 
+                       className="inp w-full"
+                       value={gameData.comp}
+                       onChange={e => setGameData({...gameData, comp: e.target.value})}
+                     >
+                       <option value="">— Selecionar Competição —</option>
+                       {config.competitions.map((c, i) => (
+                         <option key={i} value={c}>{c}</option>
+                       ))}
+                     </select>
+                     {config.competitions.length === 0 && (
+                       <p className="text-[0.6rem] text-red-500/70">Nenhuma competição cadastrada. Adicione uma no menu lateral.</p>
+                     )}
+                   </div>
+
                    <button className="btn btn-primary" style={{fontSize:'.95rem', padding:'.85rem 2rem'}} onClick={submitSumula}>✓ Finalizar e Registrar Súmula</button>
                  </div>
                  <div className="step-nav">
@@ -1352,7 +1606,11 @@ export default function App() {
                      <td style={{fontFamily:'DM Mono', color:'var(--sub)', fontSize:'.75rem'}}>#{String(historico.length - i).padStart(3,'0')}</td>
                      <td>{new Date(r.data).toLocaleDateString('pt-BR')}</td>
                      <td style={{fontWeight:600}}>{r.teamA}</td>
-                     <td style={{fontFamily:'var(--font-bebas)', fontSize:'1.1rem', color:'var(--sky)'}}>{r.golsA} × {r.golsB}</td>
+                      <td style={{fontFamily:'var(--font-bebas)', fontSize:'1.1rem', color:'var(--sky)'}}>
+                        <div>{r.golsA} × {r.golsB}</div>
+                        {(r.extraA > 0 || r.extraB > 0) && <div className="text-[0.68rem] text-red-500/70 leading-none mt-0.5 font-sans">E: {r.extraA}x{r.extraB}</div>}
+                        {(r.penA > 0 || r.penB > 0) && <div className="text-[0.68rem] text-red-500 font-bold leading-none mt-0.5 font-sans">PE: {r.penA}x{r.penB}</div>}
+                      </td>
                      <td style={{fontWeight:600}}>{r.teamB}</td>
                      <td style={{color:'var(--sub)', fontSize:'.82rem'}}>{r.comp}</td>
                      <td><span className="status-badge s-ok">✓ {r.status}</span></td>
@@ -1389,13 +1647,16 @@ export default function App() {
         {/* TAB SUCCESS */}
         <div className={`tab-page ${activeTab === 'tab-success' ? 'active' : ''}`}>
            <div className="success-body">
-             <div className="success-icon">✓</div>
+             <div className="success-icon"><CheckCircle2 size={48} /></div>
              <h1>SÚMULA REGISTRADA</h1>
              <p>A súmula foi finalizada e registrada com sucesso. Ela encontra-se preservada no Histórico do sistema.</p>
              <div className="success-card">
                {historico[0] && (
                  <>
-                   <strong style={{color:'var(--text)',fontSize:'1rem'}}>{historico[0].teamA} {historico[0].golsA} × {historico[0].golsB} {historico[0].teamB}</strong><br/><br/>
+                    <strong style={{color:'var(--text)',fontSize:'1rem'}}>{historico[0].teamA} {historico[0].golsA} × {historico[0].golsB} {historico[0].teamB}</strong>
+                    {(historico[0].extraA > 0 || historico[0].extraB > 0) && <div className="text-xs text-red-500 font-bold mt-1">Tempo Extra: {historico[0].extraA} &times; {historico[0].extraB}</div>}
+                    {(historico[0].penA > 0 || historico[0].penB > 0) && <div className="text-xs text-red-500 font-bold mt-1">Pênaltis: {historico[0].penA} &times; {historico[0].penB}</div>}
+                    <br/><br/>
                    <strong style={{color:'var(--text)'}}>Competição:</strong> {historico[0].comp}<br/>
                    <strong style={{color:'var(--text)'}}>Data:</strong> {new Date(historico[0].data).toLocaleDateString('pt-BR')}<br/>
                    <strong style={{color:'var(--text)'}}>Árbitro Principal:</strong> {historico[0].arb}
@@ -1404,7 +1665,7 @@ export default function App() {
              </div>
              <div style={{display:'flex', gap:'.75rem', flexWrap:'wrap', justifyContent:'center'}}>
                 <button className="btn btn-primary" style={{ flex: 1, minWidth: '220px', justifyContent: 'center', padding: '1rem', fontSize: '1rem' }} onClick={()=>window.print()}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>🖨 Imprimir / Salvar PDF</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><Printer size={18} /> Imprimir / Salvar PDF</span>
                 </button>
                 <button className="btn btn-ghost" style={{ flex: 1, minWidth: '150px', justifyContent: 'center', padding: '1rem' }} onClick={()=>goTab('tab-gerar')}>Nova Súmula</button>
                 <button className="btn btn-ghost" style={{ flex: 1, minWidth: '150px', justifyContent: 'center', padding: '1rem' }} onClick={()=>goTab('tab-hist')}>Ver Histórico</button>
@@ -1433,7 +1694,21 @@ export default function App() {
         </div>
 
         <div className="p-score-box">
-          {gameData.teamA} {sumula.scoreA} &times; {sumula.scoreB} {gameData.teamB}
+          <div className="flex flex-col items-center gap-1">
+            <div className="text-2xl">
+              {gameData.teamA} {sumula.scoreA} &times; {sumula.scoreB} {gameData.teamB}
+            </div>
+            {(sumula.scoreExtraA > 0 || sumula.scoreExtraB > 0) && (
+              <div className="text-xs uppercase tracking-widest text-[#ef4444] font-bold">
+                T. Extra: {sumula.scoreExtraA} &times; {sumula.scoreExtraB}
+              </div>
+            )}
+            {(sumula.scorePenA > 0 || sumula.scorePenB > 0) && (
+              <div className="text-xs uppercase tracking-widest text-[#ef4444] font-bold">
+                Pênaltis: {sumula.scorePenA} &times; {sumula.scorePenB}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="p-teams-wrapper">
@@ -1447,7 +1722,7 @@ export default function App() {
                 <tr><th></th><th></th><th></th><th></th><th></th></tr>
               </thead>
               <tbody>
-                {Array.from({length: 15}).map((_, i) => {
+                {Array.from({length: 8}).map((_, i) => {
                    const p = playersA[i];
                    const g = p ? goalsA.filter(x => x.name.includes(p.name)).length : 0;
                    const p1subs = subsGridA[i].filter(v => v !== '').map(v => ({v, c: '#38bdf8'}));
@@ -1468,11 +1743,11 @@ export default function App() {
             </table>
             <div className="p-section-title">Gols e Faltas (Equipe A)</div>
             <div className="p-goals"><strong>Gols: </strong> 
-              {goalsA.length > 0 ? goalsA.map((g,i) => <span key={i}>{g.name} ({g.min}&apos; {g.period}) / </span>) : '—'}
+              {goalsA.length > 0 ? goalsA.map((g,i) => <span key={i} style={g.period === '2º Per.' ? {color:'#ef4444'} : {}}>{g.name} ({g.min}&apos; {g.period}) / </span>) : '—'}
             </div>
             <div className="p-cards">
-              <strong>Faltas Acumuladas: </strong> 1ºT: {faultsA1} | 2ºT: {faultsA2}<br/>
-              <strong>Pedidos de Tempo: </strong> 1ºT: {sumula.timeA1 || '—'} | 2ºT: {sumula.timeA2 || '—'}
+              <strong>Faltas Acumuladas: </strong> 1ºT: {faultsA1} | 2ºT: <span style={{color:'#ef4444', fontWeight:'bold'}}>{faultsA2}</span><br/>
+              <strong>Pedidos de Tempo: </strong> 1ºT: {sumula.timeA1 || '—'} | 2ºT: <span style={{color:'#ef4444', fontWeight:'bold'}}>{sumula.timeA2 || '—'}</span>
             </div>
             
             <div className="p-section-title" style={{marginTop:'10px'}}>Comissão Técnica</div>
@@ -1496,7 +1771,7 @@ export default function App() {
                 <tr><th></th><th></th><th></th><th></th><th></th></tr>
               </thead>
               <tbody>
-                {Array.from({length: 15}).map((_, i) => {
+                {Array.from({length: 8}).map((_, i) => {
                    const p = playersB[i];
                    const g = p ? goalsB.filter(x => x.name.includes(p.name)).length : 0;
                    const p1subs = subsGridB[i].filter(v => v !== '').map(v => ({v, c: '#38bdf8'}));
@@ -1517,11 +1792,11 @@ export default function App() {
             </table>
             <div className="p-section-title">Gols e Faltas (Equipe B)</div>
             <div className="p-goals"><strong>Gols: </strong> 
-              {goalsB.length > 0 ? goalsB.map((g,i) => <span key={i}>{g.name} ({g.min}&apos; {g.period}) / </span>) : '—'}
+              {goalsB.length > 0 ? goalsB.map((g,i) => <span key={i} style={g.period === '2º Per.' ? {color:'#ef4444'} : {}}>{g.name} ({g.min}&apos; {g.period}) / </span>) : '—'}
             </div>
             <div className="p-cards">
-              <strong>Faltas Acumuladas: </strong> 1ºT: {faultsB1} | 2ºT: {faultsB2}<br/>
-              <strong>Pedidos de Tempo: </strong> 1ºT: {sumula.timeB1 || '—'} | 2ºT: {sumula.timeB2 || '—'}
+              <strong>Faltas Acumuladas: </strong> 1ºT: {faultsB1} | 2ºT: <span style={{color:'#ef4444', fontWeight:'bold'}}>{faultsB2}</span><br/>
+              <strong>Pedidos de Tempo: </strong> 1ºT: {sumula.timeB1 || '—'} | 2ºT: <span style={{color:'#ef4444', fontWeight:'bold'}}>{sumula.timeB2 || '—'}</span>
             </div>
             
             <div className="p-section-title" style={{marginTop:'10px'}}>Comissão Técnica</div>
@@ -1545,8 +1820,8 @@ export default function App() {
         <div className="p-footer">
           <div className="p-footer-item"><strong>Árbitro Principal:</strong> {sumula.arb1 || '—'}<div className="p-sign-line">Assinatura</div></div>
           <div className="p-footer-item"><strong>Árbitro Auxiliar:</strong> {sumula.arb2 || '—'}<div className="p-sign-line">Assinatura</div></div>
-          <div className="p-footer-item"><strong>Anotador:</strong> {sumula.mesario || '—'}<div className="p-sign-line">Assinatura</div></div>
-          <div className="p-footer-item"><strong>Cronometrista / Repres:</strong> {sumula.rep || '—'}<div className="p-sign-line">Assinatura</div></div>
+          <div className="p-footer-item"><strong>Anotador:</strong> {sumula.arb4 || '—'}<div className="p-sign-line">Assinatura</div></div>
+          <div className="p-footer-item"><strong>Cronometrista / Repres:</strong> {`${sumula.arb5 || ''} / ${sumula.arb6 || ''}`.trim() === '/' ? '—' : `${sumula.arb5 || ''} / ${sumula.arb6 || ''}`}<div className="p-sign-line">Assinatura</div></div>
         </div>
       </div>
 
