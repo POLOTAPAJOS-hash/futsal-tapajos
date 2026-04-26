@@ -11,8 +11,8 @@
   --blue2:   #0044CC;
   --blue3:   #003AA8;
   --sky:     #2277dd;
-  --dark:    #fff7ed; /* Laranja muito claro */
-  --surface: #ffedd5; /* Laranja claro */
+  --dark:    #ffffff; /* Alterado para branco */
+  --surface: #ffffff; /* Alterado para branco */
   --card:    #ffffff;
   --border:  #e2e8f0; /* slate-200 */
   --muted:   #94a3b8; /* slate-400 */

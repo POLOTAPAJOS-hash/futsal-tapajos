@@ -957,7 +957,7 @@ export default function App() {
         <div className={`tab-page ${activeTab === 'tab-sumula' ? 'active' : ''}`}>
            <div className="sumula-wrap">
              {/* FEFUSPA Header Logo */}
-             <div className="flex flex-col items-center pt-8 pb-4 bg-[var(--surface)] border-b-2 border-orange-200 mb-6 rounded-t-xl">
+             <div className="flex flex-col items-center pt-8 pb-4 bg-white border-b-2 border-slate-200 mb-6 rounded-t-xl">
                <div className="w-28 h-32 relative mb-3">
                  <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-md">
                    {/* Shield Shape */}
@@ -1157,9 +1157,9 @@ export default function App() {
                   <div className="sec-title">🔄 Substituições</div>
                   
                   {/* Period Switcher */}
-                  <div className="flex mb-6 p-1 bg-orange-100 rounded-xl max-w-md mx-auto border border-orange-200">
+                  <div className="flex mb-6 p-1 bg-slate-100 rounded-xl max-w-md mx-auto border border-slate-200">
                     <button 
-                      className={`flex-1 py-4 font-black transition-all rounded-lg flex items-center justify-center gap-3 text-lg ${activeSubPeriod === 1 ? 'bg-white text-black border border-[#38bdf8]/50 shadow-[0_0_20px_rgba(56,189,248,0.3)]' : 'bg-orange-200/50 text-black/60 hover:bg-orange-200'}`}
+                      className={`flex-1 py-4 font-black transition-all rounded-lg flex items-center justify-center gap-3 text-lg ${activeSubPeriod === 1 ? 'bg-white text-black border border-[#38bdf8]/50 shadow-[0_0_20px_rgba(56,189,248,0.3)]' : 'bg-slate-200/50 text-black/60 hover:bg-slate-200'}`}
                       onClick={() => setActiveSubPeriod(1)}
                     >
                       <div className={`w-3 h-3 rounded-full ${activeSubPeriod === 1 ? 'bg-[#38bdf8]' : 'bg-black/20 border border-black/10'}`}></div>
@@ -1299,7 +1299,7 @@ export default function App() {
                   <div className="sec-title">⚽ Registro de Gols</div>
                   
                   {/* Period Switcher (Synced) */}
-                  <div className="flex mb-4 p-1 bg-orange-100 rounded-xl max-w-sm mx-auto border border-orange-200">
+                  <div className="flex mb-4 p-1 bg-slate-100 rounded-xl max-w-sm mx-auto border border-slate-200">
                     <button 
                       className={`flex-1 py-4 font-black transition-all rounded-lg flex items-center justify-center gap-3 text-lg ${activeSubPeriod === 1 ? 'bg-white text-black border border-[#38bdf8]/50 shadow-[0_0_20px_rgba(56,189,248,0.3)]' : 'bg-slate-200/50 text-black/60 hover:bg-slate-200'}`}
                       onClick={() => setActiveSubPeriod(1)}
@@ -1407,10 +1407,10 @@ export default function App() {
                         })}
                       </div>
                       
-                      <div className="mt-4 flex items-center justify-center gap-2 bg-orange-100 p-2 rounded-lg border border-orange-200">
-                        <span className="text-[0.65rem] bg-orange-50 text-black px-1.5 py-0.5 rounded font-black">PEDIDO DE TEMPO:</span>
+                      <div className="mt-4 flex items-center justify-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-200">
+                        <span className="text-[0.65rem] bg-white text-black px-1.5 py-0.5 rounded font-black">PEDIDO DE TEMPO:</span>
                         <input 
-                          className="goal-min bg-orange-50 border text-center w-20" 
+                          className="goal-min bg-slate-50 border text-center w-20" 
                           style={{
                             color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', 
                             borderColor: activeSubPeriod === 1 ? 'rgba(56,189,248,0.5)' : 'rgba(239,68,68,0.5)',
@@ -1445,10 +1445,10 @@ export default function App() {
                         })}
                       </div>
                       
-                      <div className="mt-4 flex items-center justify-center gap-2 bg-orange-100 p-2 rounded-lg border border-orange-200">
-                        <span className="text-[0.65rem] bg-orange-50 text-black px-1.5 py-0.5 rounded font-black">PEDIDO DE TEMPO:</span>
+                      <div className="mt-4 flex items-center justify-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-200">
+                        <span className="text-[0.65rem] bg-white text-black px-1.5 py-0.5 rounded font-black">PEDIDO DE TEMPO:</span>
                         <input 
-                          className="goal-min bg-orange-50 border text-center w-20" 
+                          className="goal-min bg-slate-50 border text-center w-20" 
                           style={{
                             color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', 
                             borderColor: activeSubPeriod === 1 ? 'rgba(56,189,248,0.5)' : 'rgba(239,68,68,0.5)',
