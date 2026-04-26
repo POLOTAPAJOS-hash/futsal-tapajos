@@ -29,7 +29,9 @@ export default function App() {
   const [config, setConfig] = useState({
     clube: 'FEFUSPA', cidade: 'Santarém', estado: 'PA', ginasio: '',
     comp: '', cat: 'Adulto / Masculino', temp: '', nextNum: 1,
-    competitions: [] as string[]
+    competitions: [] as string[],
+    mobileMode: true,
+    confirmSave: true
   });
 
   const [newCompName, setNewCompName] = useState('');
@@ -75,10 +77,10 @@ export default function App() {
   const [playersB, setPlayersB] = useState<Player[]>([]);
   const [goalsA, setGoalsA] = useState<Goal[]>([]);
   const [goalsB, setGoalsB] = useState<Goal[]>([]);
-  const [subsGridA, setSubsGridA] = useState<string[][]>(Array.from({length: 8}, () => Array(5).fill('')));
-  const [subsGridB, setSubsGridB] = useState<string[][]>(Array.from({length: 8}, () => Array(5).fill('')));
-  const [subsGridA2, setSubsGridA2] = useState<string[][]>(Array.from({length: 8}, () => Array(5).fill('')));
-  const [subsGridB2, setSubsGridB2] = useState<string[][]>(Array.from({length: 8}, () => Array(5).fill('')));
+  const [subsGridA, setSubsGridA] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
+  const [subsGridB, setSubsGridB] = useState<string[][]>(Array.from({length: 15}, () => Array(5).fill('')));
+  const [subsGridA_Per, setSubsGridA_Per] = useState<number[][]>(Array.from({length: 15}, () => Array(5).fill(0)));
+  const [subsGridB_Per, setSubsGridB_Per] = useState<number[][]>(Array.from({length: 15}, () => Array(5).fill(0)));
   
   const [faultsA1, setFaultsA1] = useState(0);
   const [faultsA2, setFaultsA2] = useState(0);
@@ -379,11 +381,12 @@ export default function App() {
   };
 
   const addGoal = (team: 'a'|'b') => {
+    const currentPeriodStr = activeSubPeriod === 1 ? '1º Per.' : '2º Per.';
     if(team === 'a') {
-      setGoalsA([...goalsA, { id: Date.now(), name: '', period: '1º Per.', min: '' }]);
+      setGoalsA([...goalsA, { id: Date.now(), name: '', period: currentPeriodStr, min: '' }]);
       setSumula(s => ({...s, scoreA: s.scoreA + 1}));
     } else {
-      setGoalsB([...goalsB, { id: Date.now(), name: '', period: '1º Per.', min: '' }]);
+      setGoalsB([...goalsB, { id: Date.now(), name: '', period: currentPeriodStr, min: '' }]);
       setSumula(s => ({...s, scoreB: s.scoreB + 1}));
     }
   };
@@ -400,19 +403,31 @@ export default function App() {
   const updateSubsGrid = (team: 'a'|'b', rIdx: number, cIdx: number, val: string, period?: 1 | 2) => {
     const p = period || activeSubPeriod;
     if (team === 'a') {
-      const setter = p === 1 ? setSubsGridA : setSubsGridA2;
-      setter(prev => {
+      setSubsGridA(prev => {
         const next = [...prev];
         next[rIdx] = [...next[rIdx]];
         next[rIdx][cIdx] = val;
         return next;
       });
+      setSubsGridA_Per(prev => {
+        const next = [...prev];
+        next[rIdx] = [...next[rIdx]];
+        if (val === '') next[rIdx][cIdx] = 0;
+        else if (next[rIdx][cIdx] === 0) next[rIdx][cIdx] = p;
+        return next;
+      });
     } else {
-      const setter = p === 1 ? setSubsGridB : setSubsGridB2;
-      setter(prev => {
+      setSubsGridB(prev => {
         const next = [...prev];
         next[rIdx] = [...next[rIdx]];
         next[rIdx][cIdx] = val;
+        return next;
+      });
+      setSubsGridB_Per(prev => {
+        const next = [...prev];
+        next[rIdx] = [...next[rIdx]];
+        if (val === '') next[rIdx][cIdx] = 0;
+        else if (next[rIdx][cIdx] === 0) next[rIdx][cIdx] = p;
         return next;
       });
     }
@@ -420,6 +435,7 @@ export default function App() {
 
   // ----- FINALIZAR ------
   const submitSumula = () => {
+    if (config.confirmSave && !confirm('Deseja realmente registrar esta súmula?')) return;
     const reg = {
       id: Date.now(),
       data: gameData.date || new Date().toISOString().slice(0,10),
@@ -661,9 +677,9 @@ export default function App() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                </div>
-              </>
+              </div>
+            </div>
+          </>
             )}
             
             {importStatus.msg && <div className={`import-status ${importStatus.type} !block`}>{importStatus.msg}</div>}
@@ -705,12 +721,21 @@ export default function App() {
       )}
 
       {/* SIDEBAR */}
+      {/* SIDEBAR OVERLAY */}
+      <div 
+        className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`} 
+        onClick={() => setSidebarOpen(false)}
+      ></div>
+
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
           <div className="brand-logo">FE</div>
           <div className="brand-text">
             <div className="brand-name">FEFUSPA</div>
           </div>
+          <button className="lg:hidden p-2 text-[var(--sub)]" onClick={() => setSidebarOpen(false)}>
+             <Zap size={20} className="rotate-45" /> 
+          </button>
         </div>
         <nav className="sidebar-nav">
           <div className="nav-section-label">Principal</div>
@@ -772,7 +797,7 @@ export default function App() {
             ))}
           </div>
         </nav>
-        <div className="sidebar-footer">FEFUSPA © 2024<br/>Versão 1.0.0</div>
+        <div className="sidebar-footer">FEFUSPA © 2026<br/>Versão 1.0.0</div>
       </aside>
 
       <div className="main-content">
@@ -931,6 +956,33 @@ export default function App() {
         {/* TAB PREENCHER SUMULA */}
         <div className={`tab-page ${activeTab === 'tab-sumula' ? 'active' : ''}`}>
            <div className="sumula-wrap">
+             {/* FEFUSPA Header Logo */}
+             <div className="flex flex-col items-center pt-8 pb-4 bg-white border-b-2 border-slate-200 mb-6 rounded-t-xl">
+               <div className="w-28 h-32 relative mb-3">
+                 <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-md">
+                   {/* Shield Shape */}
+                   <path d="M5,10 Q5,0 15,0 L85,0 Q95,0 95,10 L95,80 Q95,120 50,120 Q5,120 5,80 Z" fill="#1e3a8a" />
+                   {/* Red Background */}
+                   <path d="M8,40 L92,40 L92,80 Q92,115 50,115 Q8,115 8,80 Z" fill="#dc2626" />
+                   {/* White Stripe */}
+                   <rect x="40" y="40" width="20" height="75" fill="#ffffff" />
+                   {/* FEFUSPA Text */}
+                   <text x="50" y="28" fill="#ffffff" fontSize="16" font-black textAnchor="middle" style={{fontFamily: 'sans-serif', fontWeight: 900}}>FEFUSPA</text>
+                   {/* Blue Star */}
+                   <path d="M50,55 L53,63 L61,63 L55,68 L57,76 L50,71 L43,76 L45,68 L39,63 L47,63 Z" fill="#1e3a8a" />
+                   {/* Date */}
+                   <text x="50" y="108" fill="#1e3a8a" fontSize="8" font-black textAnchor="middle" style={{fontFamily: 'sans-serif', fontWeight: 900}}>05 04 88</text>
+                 </svg>
+               </div>
+               <h1 className="text-xl font-black text-slate-900 text-center uppercase tracking-tighter">
+                 Federação de Futebol de Salão do Pará
+               </h1>
+               <div className="flex items-center gap-2 mt-1">
+                 <div className="h-[2px] w-6 bg-slate-300"></div>
+                 <p className="text-[0.65rem] text-slate-500 font-bold uppercase tracking-widest">Súmula Eletrônica Oficial</p>
+                 <div className="h-[2px] w-6 bg-slate-300"></div>
+               </div>
+             </div>
              <div className="game-bar">
                <div className="game-teams-disp">
                  <label className="cursor-pointer flex items-center justify-center bg-white/5 border border-white/10 hover:border-sky rounded-lg w-12 h-12 overflow-hidden shrink-0 transition-colors" title="Adicionar Escudo Equipe A">
@@ -1105,19 +1157,19 @@ export default function App() {
                   <div className="sec-title">🔄 Substituições</div>
                   
                   {/* Period Switcher */}
-                  <div className="flex mb-6 p-1 bg-white/5 rounded-xl max-w-md mx-auto border border-white/10">
+                  <div className="flex mb-6 p-1 bg-slate-100 rounded-xl max-w-md mx-auto border border-slate-200">
                     <button 
-                      className={`flex-1 py-3 font-bold transition-all rounded-lg flex items-center justify-center gap-2 ${activeSubPeriod === 1 ? 'bg-white/10 text-[#38bdf8] border border-[#38bdf8]/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'text-white/40 hover:text-white/60'}`}
+                      className={`flex-1 py-4 font-black transition-all rounded-lg flex items-center justify-center gap-3 text-lg ${activeSubPeriod === 1 ? 'bg-white text-black border border-[#38bdf8]/50 shadow-[0_0_20px_rgba(56,189,248,0.3)]' : 'bg-slate-200/50 text-black/60 hover:bg-slate-200'}`}
                       onClick={() => setActiveSubPeriod(1)}
                     >
-                      <div className={`w-2 h-2 rounded-full ${activeSubPeriod === 1 ? 'bg-[#38bdf8]' : 'bg-transparent border border-white/20'}`}></div>
+                      <div className={`w-3 h-3 rounded-full ${activeSubPeriod === 1 ? 'bg-[#38bdf8]' : 'bg-black/20 border border-black/10'}`}></div>
                       1º TEMPO
                     </button>
                     <button 
-                      className={`flex-1 py-3 font-bold transition-all rounded-lg flex items-center justify-center gap-2 ${activeSubPeriod === 2 ? 'bg-white/10 text-[#ef4444] border border-[#ef4444]/30 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'text-white/40 hover:text-white/60'}`}
+                      className={`flex-1 py-4 font-black transition-all rounded-lg flex items-center justify-center gap-3 text-lg ${activeSubPeriod === 2 ? 'bg-white text-black border border-[#ef4444]/50 shadow-[0_0_20px_rgba(239,68,68,0.3)]' : 'bg-slate-200/50 text-black/60 hover:bg-slate-200'}`}
                       onClick={() => setActiveSubPeriod(2)}
                     >
-                      <div className={`w-2 h-2 rounded-full ${activeSubPeriod === 2 ? 'bg-[#ef4444]' : 'bg-transparent border border-white/20'}`}></div>
+                      <div className={`w-3 h-3 rounded-full ${activeSubPeriod === 2 ? 'bg-[#ef4444]' : 'bg-black/20 border border-black/10'}`}></div>
                       2º TEMPO
                     </button>
                   </div>
@@ -1125,74 +1177,47 @@ export default function App() {
                   <div className="goals-grid" style={{gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)'}}>
                     {/* TEAM A */}
                     <div className="flex flex-col gap-6">
-                      <div className="goals-label" style={{color:'var(--sky)'}}>{gameData.teamA||'EQUIPE A'}</div>
+                      <div className="goals-label text-xl font-black mb-4" style={{color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', textShadow: '0 2px 4px rgba(0,0,0,0.2)'}}>{gameData.teamA||'EQUIPE A'}</div>
                       
-                      {/* 1st Half Team A */}
+                      {/* Active Period Substitutions Team A */}
                       <div>
-                        <div className="text-[0.65rem] text-[#38bdf8] mb-2 uppercase tracking-wide font-bold">Substituições 1º Tempo</div>
-                        <div className="grid gap-1">
+                        <div 
+                          className="text-[0.8rem] mb-3 uppercase tracking-widest font-black"
+                          style={{ color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444' }}
+                        >
+                          SUBSTITUIÇÕES {activeSubPeriod}º TEMPO
+                        </div>
+                        <div className="grid gap-2">
                           {subsGridA.map((row, rIdx) => (
                              <div key={rIdx} className="flex flex-col gap-1">
-                               <div className="flex gap-1">
+                               <div className="flex gap-2">
                                  {row.map((val, cIdx) => {
                                    const pName = playersA.find(p => p.num === val)?.name;
+                                   const cellPer = subsGridA_Per[rIdx][cIdx];
+                                   const color = cellPer === 2 ? '#ef4444' : '#38bdf8';
                                    return (
                                      <div key={cIdx} className="flex flex-col flex-1 min-w-0">
                                        <input 
-                                         className="goal-min text-center bg-white/10 border border-white/20 w-full" 
+                                         className="goal-min text-center bg-white/10 border-2 w-full text-lg" 
                                          style={{
-                                           padding: '0.4rem', 
+                                           padding: '0.6rem 0.2rem', 
                                            minWidth: 0, 
-                                           borderRadius: '4px',
-                                           color: 'black',
-                                           fontWeight: 'bold'
+                                           borderRadius: '8px',
+                                           color: color,
+                                           fontWeight: '900',
+                                           borderColor: color === '#ef4444' ? 'rgba(239,68,68,0.5)' : 'rgba(56,189,248,0.5)'
                                          }} 
                                          maxLength={2} 
                                          inputMode="numeric" 
                                          value={val} 
-                                         onChange={e=>updateSubsGrid('a', rIdx, cIdx, e.target.value.replace(/\D/g, ''), 1)} 
+                                         onChange={e=>updateSubsGrid('a', rIdx, cIdx, e.target.value.replace(/\D/g, ''), activeSubPeriod)} 
                                        />
                                        {val && (
-                                         <div className="text-[0.45rem] text-black truncate text-center mt-0.5 uppercase font-medium" title={pName}>
-                                           {pName ? pName.split(' ')[0] : '—'}
-                                         </div>
-                                       )}
-                                     </div>
-                                   );
-                                 })}
-                               </div>
-                             </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* 2nd Half Team A */}
-                      <div>
-                        <div className="text-[0.65rem] text-[#ef4444] mb-2 uppercase tracking-wide font-bold">Substituições 2º Tempo</div>
-                        <div className="grid gap-1">
-                          {subsGridA2.map((row, rIdx) => (
-                             <div key={rIdx} className="flex flex-col gap-1">
-                               <div className="flex gap-1">
-                                 {row.map((val, cIdx) => {
-                                   const pName = playersA.find(p => p.num === val)?.name;
-                                   return (
-                                     <div key={cIdx} className="flex flex-col flex-1 min-w-0">
-                                       <input 
-                                         className="goal-min text-center bg-white/10 border border-white/20 w-full" 
-                                         style={{
-                                           padding: '0.4rem', 
-                                           minWidth: 0, 
-                                           borderRadius: '4px',
-                                           color: '#ef4444',
-                                           fontWeight: 'bold'
-                                         }} 
-                                         maxLength={2} 
-                                         inputMode="numeric" 
-                                         value={val} 
-                                         onChange={e=>updateSubsGrid('a', rIdx, cIdx, e.target.value.replace(/\D/g, ''), 2)} 
-                                       />
-                                       {val && (
-                                         <div className="text-[0.45rem] text-[#ef4444] truncate text-center mt-0.5 uppercase font-medium" title={pName}>
+                                         <div 
+                                           className="text-[0.6rem] truncate text-center mt-1 uppercase font-black px-1 rounded" 
+                                           title={pName}
+                                           style={{ color: 'black', background: 'white' }}
+                                         >
                                            {pName ? pName.split(' ')[0] : '—'}
                                          </div>
                                        )}
@@ -1208,74 +1233,47 @@ export default function App() {
 
                     {/* TEAM B */}
                     <div className="flex flex-col gap-6">
-                      <div className="goals-label" style={{color:'var(--yellow)'}}>{gameData.teamB||'EQUIPE B'}</div>
+                      <div className="goals-label text-xl font-black mb-4" style={{color: activeSubPeriod === 1 ? 'var(--yellow)' : '#ef4444', textShadow: '0 2px 4px rgba(0,0,0,0.2)'}}>{gameData.teamB||'EQUIPE B'}</div>
                       
-                      {/* 1st Half Team B */}
+                      {/* Active Period Substitutions Team B */}
                       <div>
-                        <div className="text-[0.65rem] text-[#38bdf8] mb-2 uppercase tracking-wide font-bold">Substituições 1º Tempo</div>
-                        <div className="grid gap-1">
+                        <div 
+                          className="text-[0.8rem] mb-3 uppercase tracking-widest font-black"
+                          style={{ color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444' }}
+                        >
+                          SUBSTITUIÇÕES {activeSubPeriod}º TEMPO
+                        </div>
+                        <div className="grid gap-2">
                           {subsGridB.map((row, rIdx) => (
                              <div key={rIdx} className="flex flex-col gap-1">
-                               <div className="flex gap-1">
+                               <div className="flex gap-2">
                                  {row.map((val, cIdx) => {
                                    const pName = playersB.find(p => p.num === val)?.name;
+                                   const cellPer = subsGridB_Per[rIdx][cIdx];
+                                   const color = cellPer === 2 ? '#ef4444' : '#38bdf8';
                                    return (
                                      <div key={cIdx} className="flex flex-col flex-1 min-w-0">
                                        <input 
-                                         className="goal-min text-center bg-white/10 border border-white/20 w-full" 
+                                         className="goal-min text-center bg-white/10 border-2 w-full text-lg" 
                                          style={{
-                                           padding: '0.4rem', 
+                                           padding: '0.6rem 0.2rem', 
                                            minWidth: 0, 
-                                           borderRadius: '4px',
-                                           color: 'black',
-                                           fontWeight: 'bold'
+                                           borderRadius: '8px',
+                                           color: color,
+                                           fontWeight: '900',
+                                           borderColor: color === '#ef4444' ? 'rgba(239,68,68,0.5)' : 'rgba(56,189,248,0.5)'
                                          }} 
                                          maxLength={2} 
                                          inputMode="numeric" 
                                          value={val} 
-                                         onChange={e=>updateSubsGrid('b', rIdx, cIdx, e.target.value.replace(/\D/g, ''), 1)} 
+                                         onChange={e=>updateSubsGrid('b', rIdx, cIdx, e.target.value.replace(/\D/g, ''), activeSubPeriod)} 
                                        />
                                        {val && (
-                                         <div className="text-[0.45rem] text-black truncate text-center mt-0.5 uppercase font-medium" title={pName}>
-                                           {pName ? pName.split(' ')[0] : '—'}
-                                         </div>
-                                       )}
-                                     </div>
-                                   );
-                                 })}
-                               </div>
-                             </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* 2nd Half Team B */}
-                      <div>
-                        <div className="text-[0.65rem] text-[#ef4444] mb-2 uppercase tracking-wide font-bold">Substituições 2º Tempo</div>
-                        <div className="grid gap-1">
-                          {subsGridB2.map((row, rIdx) => (
-                             <div key={rIdx} className="flex flex-col gap-1">
-                               <div className="flex gap-1">
-                                 {row.map((val, cIdx) => {
-                                   const pName = playersB.find(p => p.num === val)?.name;
-                                   return (
-                                     <div key={cIdx} className="flex flex-col flex-1 min-w-0">
-                                       <input 
-                                         className="goal-min text-center bg-white/10 border border-white/20 w-full" 
-                                         style={{
-                                           padding: '0.4rem', 
-                                           minWidth: 0, 
-                                           borderRadius: '4px',
-                                           color: '#ef4444',
-                                           fontWeight: 'bold'
-                                         }} 
-                                         maxLength={2} 
-                                         inputMode="numeric" 
-                                         value={val} 
-                                         onChange={e=>updateSubsGrid('b', rIdx, cIdx, e.target.value.replace(/\D/g, ''), 2)} 
-                                       />
-                                       {val && (
-                                         <div className="text-[0.45rem] text-[#ef4444] truncate text-center mt-0.5 uppercase font-medium" title={pName}>
+                                         <div 
+                                           className="text-[0.6rem] truncate text-center mt-1 uppercase font-black px-1 rounded" 
+                                           title={pName}
+                                           style={{ color: 'black', background: 'white' }}
+                                         >
                                            {pName ? pName.split(' ')[0] : '—'}
                                          </div>
                                        )}
@@ -1297,108 +1295,177 @@ export default function App() {
              )}
 
              {currentStep === 3 && (
-               <div className="step-content active">
-                 <div className="sec-title">⚽ Registro de Gols</div>
-                 <div className="goals-grid">
-                   <div>
-                     <div className="goals-label" style={{color:'var(--sky)'}}>{gameData.teamA||'EQUIPE A'}</div>
-                     {goalsA.map(g => (
-                       <div className="goal-entry" key={g.id}>
-                         <span style={{fontSize:'0.9rem'}}>⚽</span>
-                          <select 
-                            style={{ flex: 1, background: 'transparent', color: 'black', border: 'none', outline: 'none' }}
-                            value={g.name} 
-                            onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,name:e.target.value}:x))}
-                         >
-                           <option value="" style={{color:'black'}}>👤 Selecionar Atleta...</option>
-                           {playersA.map(p => (
-                             <option key={p.id} value={p.num ? `${p.num} - ${p.name}` : p.name} style={{color:'black'}}>
-                               {p.num ? `${p.num} - ` : ''}{p.name}
-                             </option>
-                           ))}
-                           <option value="Gol Contra" style={{color:'black'}}>Gol Contra</option>
-                         </select>
-                         <select value={g.period} onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,period:e.target.value}:x))}>
-                           <option>1º Per.</option><option>2º Per.</option><option>Prorrog.</option>
-                         </select>
-                         <input className="goal-min" style={g.period === '2º Per.' ? {color:'#ef4444', borderColor:'#ef4444'} : {}} value={g.min} maxLength={5} inputMode="numeric" onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,min:handleTimeChange(e.target.value)}:x))} placeholder="min:seg" />
-                         <span className="goal-del" onClick={()=>removeGoal('a', g.id)}>✕</span>
-                       </div>
-                     ))}
-                     <button className="add-goal-btn" onClick={()=>addGoal('a')}>+ Registrar Gol ({sumula.scoreA})</button>
-                   </div>
-                   <div>
-                     <div className="goals-label" style={{color:'var(--yellow)'}}>{gameData.teamB||'EQUIPE B'}</div>
-                     {goalsB.map(g => (
-                       <div className="goal-entry" key={g.id}>
-                         <span style={{fontSize:'0.9rem'}}>⚽</span>
-                          <select 
-                            style={{ flex: 1, background: 'transparent', color: 'black', border: 'none', outline: 'none' }}
-                            value={g.name} 
-                            onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,name:e.target.value}:x))}
-                         >
-                           <option value="" style={{color:'black'}}>👤 Selecionar Atleta...</option>
-                           {playersB.map(p => (
-                             <option key={p.id} value={p.num ? `${p.num} - ${p.name}` : p.name} style={{color:'black'}}>
-                               {p.num ? `${p.num} - ` : ''}{p.name}
-                             </option>
-                           ))}
-                           <option value="Gol Contra" style={{color:'black'}}>Gol Contra</option>
-                         </select>
-                         <select value={g.period} onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,period:e.target.value}:x))}>
-                           <option>1º Per.</option><option>2º Per.</option><option>Prorrog.</option>
-                         </select>
-                         <input className="goal-min" style={g.period === '2º Per.' ? {color:'#ef4444', borderColor:'#ef4444'} : {}} value={g.min} maxLength={5} inputMode="numeric" onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,min:handleTimeChange(e.target.value)}:x))} placeholder="min:seg" />
-                         <span className="goal-del" onClick={()=>removeGoal('b', g.id)}>✕</span>
-                       </div>
-                     ))}
-                     <button className="add-goal-btn" onClick={()=>addGoal('b')}>+ Registrar Gol ({sumula.scoreB})</button>
-                   </div>
-                 </div>
-                 
-                 <div className="sec-title mt-8">⛔ Faltas Acumuladas</div>
-                 <div className="teams-grid">
-                   <div className="team-panel" style={{padding:'1rem'}}>
-                     <div style={{fontSize:'.72rem',color:'#38bdf8',marginBottom:'.45rem',fontWeight:'bold'}}>1º Período — {gameData.teamA}</div>
-                     <div className="faults-display">
-                       {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsA1>=n ? (n>=6?'crit':'on'):''}`} onClick={()=>setFaultsA1(n === faultsA1 ? n-1 : n)}>{n}</button>)}
-                     </div>
-                     <div className="mt-2 flex items-center gap-2">
-                       <span className="text-[0.7rem] text-white/50">Pedido de Tempo:</span>
-                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeA1} onChange={e=>setSumula({...sumula, timeA1:handleTimeChange(e.target.value)})} />
-                     </div>
+                <div className="step-content active">
+                  <div className="sec-title">⚽ Registro de Gols</div>
+                  
+                  {/* Period Switcher (Synced) */}
+                  <div className="flex mb-4 p-1 bg-slate-100 rounded-xl max-w-sm mx-auto border border-slate-200">
+                    <button 
+                      className={`flex-1 py-4 font-black transition-all rounded-lg flex items-center justify-center gap-3 text-lg ${activeSubPeriod === 1 ? 'bg-white text-black border border-[#38bdf8]/50 shadow-[0_0_20px_rgba(56,189,248,0.3)]' : 'bg-slate-200/50 text-black/60 hover:bg-slate-200'}`}
+                      onClick={() => setActiveSubPeriod(1)}
+                    >
+                      <div className={`w-3 h-3 rounded-full ${activeSubPeriod === 1 ? 'bg-[#38bdf8]' : 'bg-black/20 border border-black/10'}`}></div>
+                      1º TEMPO
+                    </button>
+                    <button 
+                      className={`flex-1 py-4 font-black transition-all rounded-lg flex items-center justify-center gap-3 text-lg ${activeSubPeriod === 2 ? 'bg-white text-black border border-[#ef4444]/50 shadow-[0_0_20px_rgba(239,68,68,0.3)]' : 'bg-slate-200/50 text-black/60 hover:bg-slate-200'}`}
+                      onClick={() => setActiveSubPeriod(2)}
+                    >
+                      <div className={`w-3 h-3 rounded-full ${activeSubPeriod === 2 ? 'bg-[#ef4444]' : 'bg-black/20 border border-black/10'}`}></div>
+                      2º TEMPO
+                    </button>
+                  </div>
 
-                     <div style={{fontSize:'.72rem',color:'#ef4444',margin:'.75rem 0 .45rem',fontWeight:'bold'}}>2º Período — {gameData.teamA}</div>
-                     <div className="faults-display">
-                       {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsA2>=n ? (n>=6?'crit':'on'):''}`} style={!(faultsA2>=n) ? {color:'#ef4444', borderColor:'rgba(239,68,68,0.3)'} : {}} onClick={()=>setFaultsA2(n === faultsA2 ? n-1 : n)}>{n}</button>)}
-                     </div>
-                     <div className="mt-2 flex items-center gap-2">
-                       <span className="text-[0.7rem] text-white/50">Pedido de Tempo:</span>
-                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" style={{color:'#ef4444'}} maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeA2} onChange={e=>setSumula({...sumula, timeA2:handleTimeChange(e.target.value)})} />
-                     </div>
-                   </div>
-                   <div className="team-panel" style={{padding:'1rem'}}>
-                     <div style={{fontSize:'.72rem',color:'#38bdf8',marginBottom:'.45rem',fontWeight:'bold'}}>1º Período — {gameData.teamB}</div>
-                     <div className="faults-display">
-                       {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsB1>=n ? (n>=6?'crit':'on'):''}`} onClick={()=>setFaultsB1(n === faultsB1 ? n-1 : n)}>{n}</button>)}
-                     </div>
-                     <div className="mt-2 flex items-center gap-2">
-                       <span className="text-[0.7rem] text-white/50">Pedido de Tempo:</span>
-                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeB1} onChange={e=>setSumula({...sumula, timeB1:handleTimeChange(e.target.value)})} />
-                     </div>
+                  <div className="goals-grid">
+                    <div>
+                      <div className="goals-label text-xl font-black mb-4" style={{color: activeSubPeriod === 1 ? 'var(--sky)' : '#ef4444', textShadow: '0 2px 4px rgba(0,0,0,0.2)'}}>{gameData.teamA||'EQUIPE A'}</div>
+                      {goalsA.map(g => (
+                        <div className="goal-entry" key={g.id} style={{ borderColor: g.period.includes(activeSubPeriod.toString()) ? (activeSubPeriod === 1 ? '#38bdf8' : '#ef4444') : 'var(--border)', opacity: g.period.includes(activeSubPeriod.toString()) ? 1 : 0.5 }}>
+                          <span style={{fontSize:'0.9rem'}}>⚽</span>
+                           <select 
+                             style={{ flex: 1, background: 'transparent', color: 'black', border: 'none', outline: 'none' }}
+                             value={g.name} 
+                             onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,name:e.target.value}:x))}
+                          >
+                            <option value="" style={{color:'black'}}>👤 Selecionar Atleta...</option>
+                            {playersA.map(p => (
+                              <option key={p.id} value={p.num ? `${p.num} - ${p.name}` : p.name} style={{color:'black'}}>
+                                {p.num ? `${p.num} - ` : ''}{p.name}
+                              </option>
+                            ))}
+                            <option value="Gol Contra" style={{color:'black'}}>Gol Contra</option>
+                          </select>
+                          <select value={g.period} onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,period:e.target.value}:x))}>
+                            <option>1º Per.</option><option>2º Per.</option><option>Prorrog.</option>
+                          </select>
+                          <input className="goal-min" style={g.period.includes('2') ? {color:'#ef4444', borderColor:'#ef4444'} : {color:'#38bdf8', borderColor:'#38bdf8'}} value={g.min} maxLength={5} inputMode="numeric" onChange={e=>setGoalsA(goalsA.map(x=>x.id===g.id?{...x,min:handleTimeChange(e.target.value)}:x))} placeholder="min:seg" />
+                          <span className="goal-del" onClick={()=>removeGoal('a', g.id)}>✕</span>
+                        </div>
+                      ))}
+                      <button 
+                        className="add-goal-btn" 
+                        onClick={()=>addGoal('a')}
+                        style={{ borderStyle: 'dashed', borderColor: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', background: activeSubPeriod === 1 ? 'rgba(56,189,248,0.05)' : 'rgba(239,68,68,0.05)' }}
+                      >
+                        + Registrar Gol ({sumula.scoreA})
+                      </button>
+                    </div>
+                    <div>
+                      <div className="goals-label text-xl font-black mb-4" style={{color: activeSubPeriod === 1 ? 'var(--yellow)' : '#ef4444', textShadow: '0 2px 4px rgba(0,0,0,0.2)'}}>{gameData.teamB||'EQUIPE B'}</div>
+                      {goalsB.map(g => (
+                        <div className="goal-entry" key={g.id} style={{ borderColor: g.period.includes(activeSubPeriod.toString()) ? (activeSubPeriod === 1 ? '#38bdf8' : '#ef4444') : 'var(--border)', opacity: g.period.includes(activeSubPeriod.toString()) ? 1 : 0.5 }}>
+                          <span style={{fontSize:'0.9rem'}}>⚽</span>
+                           <select 
+                             style={{ flex: 1, background: 'transparent', color: 'black', border: 'none', outline: 'none' }}
+                             value={g.name} 
+                             onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,name:e.target.value}:x))}
+                          >
+                            <option value="" style={{color:'black'}}>👤 Selecionar Atleta...</option>
+                            {playersB.map(p => (
+                              <option key={p.id} value={p.num ? `${p.num} - ${p.name}` : p.name} style={{color:'black'}}>
+                                {p.num ? `${p.num} - ` : ''}{p.name}
+                              </option>
+                            ))}
+                            <option value="Gol Contra" style={{color:'black'}}>Gol Contra</option>
+                          </select>
+                          <select value={g.period} onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,period:e.target.value}:x))}>
+                            <option>1º Per.</option><option>2º Per.</option><option>Prorrog.</option>
+                          </select>
+                          <input className="goal-min" style={g.period.includes('2') ? {color:'#ef4444', borderColor:'#ef4444'} : {color:'#38bdf8', borderColor:'#38bdf8'}} value={g.min} maxLength={5} inputMode="numeric" onChange={e=>setGoalsB(goalsB.map(x=>x.id===g.id?{...x,min:handleTimeChange(e.target.value)}:x))} placeholder="min:seg" />
+                          <span className="goal-del" onClick={()=>removeGoal('b', g.id)}>✕</span>
+                        </div>
+                      ))}
+                      <button 
+                        className="add-goal-btn" 
+                        onClick={()=>addGoal('b')}
+                        style={{ borderStyle: 'dashed', borderColor: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', background: activeSubPeriod === 1 ? 'rgba(56,189,248,0.05)' : 'rgba(239,68,68,0.05)' }}
+                      >
+                        + Registrar Gol ({sumula.scoreB})
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="sec-title mt-8">⛔ Faltas Acumuladas — {activeSubPeriod}º Tempo</div>
+                  <div className="teams-grid">
+                    <div className="team-panel" style={{padding:'1rem', borderColor: activeSubPeriod === 1 ? 'rgba(56,189,248,0.2)' : 'rgba(239,68,68,0.2)'}}>
+                      <div style={{fontSize:'.72rem',color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', marginBottom:'.45rem',fontWeight:'bold'}}>{activeSubPeriod}º Período — {gameData.teamA}</div>
+                      <div className="faults-display">
+                        {[1,2,3,4,5,6,7,8].map(n => {
+                          const currentFaults = activeSubPeriod === 1 ? faultsA1 : faultsA2;
+                          const setFaults = activeSubPeriod === 1 ? setFaultsA1 : setFaultsA2;
+                          const color = activeSubPeriod === 1 ? '#38bdf8' : '#ef4444';
+                          return (
+                            <button 
+                              key={n} 
+                              className={`fault-btn ${currentFaults>=n ? (n>=6?'crit':'on'):''}`} 
+                              style={currentFaults>=n && n<6 ? {background:color, borderColor:color, color:'white'} : (!(currentFaults>=n) ? {color:color, borderColor: color === '#38bdf8' ? 'rgba(56,189,248,0.3)' : 'rgba(239,68,68,0.3)'} : {})}
+                              onClick={()=>setFaults(n === currentFaults ? n-1 : n)}
+                            >
+                              {n}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      
+                      <div className="mt-4 flex items-center justify-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-200">
+                        <span className="text-[0.65rem] bg-white text-black px-1.5 py-0.5 rounded font-black">PEDIDO DE TEMPO:</span>
+                        <input 
+                          className="goal-min bg-slate-50 border text-center w-20" 
+                          style={{
+                            color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', 
+                            borderColor: activeSubPeriod === 1 ? 'rgba(56,189,248,0.5)' : 'rgba(239,68,68,0.5)',
+                            fontSize: '0.8rem',
+                            padding: '4px'
+                          }} 
+                          maxLength={5} 
+                          inputMode="numeric" 
+                          placeholder="00:00" 
+                          value={activeSubPeriod === 1 ? sumula.timeA1 : sumula.timeA2} 
+                          onChange={e=>setSumula({...sumula, [activeSubPeriod === 1 ? 'timeA1' : 'timeA2']: handleTimeChange(e.target.value)})} 
+                        />
+                      </div>
+                    </div>
+                    <div className="team-panel" style={{padding:'1rem', borderColor: activeSubPeriod === 1 ? 'rgba(56,189,248,0.2)' : 'rgba(239,68,68,0.2)'}}>
+                      <div style={{fontSize:'.72rem',color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', marginBottom:'.45rem',fontWeight:'bold'}}>{activeSubPeriod}º Período — {gameData.teamB}</div>
+                      <div className="faults-display">
+                        {[1,2,3,4,5,6,7,8].map(n => {
+                          const currentFaults = activeSubPeriod === 1 ? faultsB1 : faultsB2;
+                          const setFaults = activeSubPeriod === 1 ? setFaultsB1 : setFaultsB2;
+                          const color = activeSubPeriod === 1 ? '#38bdf8' : '#ef4444';
+                          return (
+                            <button 
+                              key={n} 
+                              className={`fault-btn ${currentFaults>=n ? (n>=6?'crit':'on'):''}`} 
+                              style={currentFaults>=n && n<6 ? {background:color, borderColor:color, color:'white'} : (!(currentFaults>=n) ? {color:color, borderColor: color === '#38bdf8' ? 'rgba(56,189,248,0.3)' : 'rgba(239,68,68,0.3)'} : {})}
+                              onClick={()=>setFaults(n === currentFaults ? n-1 : n)}
+                            >
+                              {n}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      
+                      <div className="mt-4 flex items-center justify-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-200">
+                        <span className="text-[0.65rem] bg-white text-black px-1.5 py-0.5 rounded font-black">PEDIDO DE TEMPO:</span>
+                        <input 
+                          className="goal-min bg-slate-50 border text-center w-20" 
+                          style={{
+                            color: activeSubPeriod === 1 ? '#38bdf8' : '#ef4444', 
+                            borderColor: activeSubPeriod === 1 ? 'rgba(56,189,248,0.5)' : 'rgba(239,68,68,0.5)',
+                            fontSize: '0.8rem',
+                            padding: '4px'
+                          }} 
+                          maxLength={5} 
+                          inputMode="numeric" 
+                          placeholder="00:00" 
+                          value={activeSubPeriod === 1 ? sumula.timeB1 : sumula.timeB2} 
+                          onChange={e=>setSumula({...sumula, [activeSubPeriod === 1 ? 'timeB1' : 'timeB2']: handleTimeChange(e.target.value)})} 
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                     <div style={{fontSize:'.72rem',color:'#ef4444',margin:'.75rem 0 .45rem',fontWeight:'bold'}}>2º Período — {gameData.teamB}</div>
-                     <div className="faults-display">
-                       {[1,2,3,4,5,6,7,8].map(n => <button key={n} className={`fault-btn ${faultsB2>=n ? (n>=6?'crit':'on'):''}`} style={!(faultsB2>=n) ? {color:'#ef4444', borderColor:'rgba(239,68,68,0.3)'} : {}} onClick={()=>setFaultsB2(n === faultsB2 ? n-1 : n)}>{n}</button>)}
-                     </div>
-                     <div className="mt-2 flex items-center gap-2">
-                       <span className="text-[0.7rem] text-white/50">Pedido de Tempo:</span>
-                       <input className="goal-min bg-white/5 border border-white/10 text-center w-16" style={{color:'#ef4444'}} maxLength={5} inputMode="numeric" placeholder="min:seg" value={sumula.timeB2} onChange={e=>setSumula({...sumula, timeB2:handleTimeChange(e.target.value)})} />
-                     </div>
-                   </div>
-                 </div>
-
-                 <div className="step-nav">
+                  <div className="step-nav">
                     <button className="btn btn-ghost" onClick={()=>setCurrentStep(2)}>← Anterior</button>
                     <button className="btn btn-primary" onClick={()=>setCurrentStep(4)}>Próximo: Arbitragem →</button>
                   </div>
@@ -1419,28 +1486,28 @@ export default function App() {
 
                  <div className="sec-title mt-8">📝 Relatório do Árbitro</div>
                  <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                   <div className="flex flex-wrap gap-6 mb-4">
-                     <label className="flex items-center gap-2 cursor-pointer group text-white">
-                       <input 
-                         type="radio" 
-                         name="reportType" 
-                         className="w-4 h-4 accent-sky"
-                         checked={sumula.reportType === 'normal'} 
-                         onChange={() => setSumula({...sumula, reportType: 'normal', reportText: ''})} 
-                       />
-                       <span className="text-sm font-medium group-hover:text-sky transition-colors">Jogo Normal</span>
-                     </label>
-                     <label className="flex items-center gap-2 cursor-pointer group text-white">
-                       <input 
-                         type="radio" 
-                         name="reportType" 
-                         className="w-4 h-4 accent-sky"
-                         checked={sumula.reportType === 'attached'} 
-                         onChange={() => setSumula({...sumula, reportType: 'attached'})} 
-                       />
-                       <span className="text-sm font-medium group-hover:text-sky transition-colors">Segue relatório em anexo</span>
-                     </label>
-                   </div>
+                    <div className="flex flex-wrap gap-6 mb-4">
+                      <label className="flex items-center gap-2 cursor-pointer group text-black">
+                        <input 
+                          type="radio" 
+                          name="reportType" 
+                          className="w-4 h-4 accent-sky"
+                          checked={sumula.reportType === 'normal'} 
+                          onChange={() => setSumula({...sumula, reportType: 'normal', reportText: ''})} 
+                        />
+                        <span className="text-sm font-medium group-hover:text-sky transition-colors">Jogo Normal</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer group text-black">
+                        <input 
+                          type="radio" 
+                          name="reportType" 
+                          className="w-4 h-4 accent-sky"
+                          checked={sumula.reportType === 'attached'} 
+                          onChange={() => setSumula({...sumula, reportType: 'attached'})} 
+                        />
+                        <span className="text-sm font-medium group-hover:text-sky transition-colors">Segue relatório em anexo</span>
+                      </label>
+                    </div>
                    {sumula.reportType === 'attached' && (
                      <textarea 
                        className="inp w-full text-sm" 
@@ -1598,7 +1665,7 @@ export default function App() {
                  a.click();
                }}>📥 Exportar CSV</button>
              </div>
-             <table className="hist-table">
+               <table className="hist-table">
                <thead><tr><th>#</th><th>Data</th><th>Equipe A</th><th>Placar</th><th>Equipe B</th><th>Competição</th><th>Status</th></tr></thead>
                <tbody>
                  {historico.filter(r => (r.teamA+r.teamB+r.comp).toLowerCase().includes(histSearch.toLowerCase())).map((r,i) => (
@@ -1626,20 +1693,107 @@ export default function App() {
         <div className={`tab-page ${activeTab === 'tab-config' ? 'active' : ''}`}>
            <div className="config-body">
              <div className="page-heading">
-               <h1>Configurações</h1>
-               <p>Personalize o sistema para o seu clube e competição.</p>
+               <div className="flex items-center gap-3 mb-2">
+                 <div className="bg-[var(--blue)] p-2 rounded-lg text-white">
+                   <Settings size={24} />
+                 </div>
+                 <h1 className="!mb-0 text-3xl font-['Bebas_Neue'] tracking-wide">Configurações</h1>
+               </div>
+               <p className="text-[var(--sub)] font-light">Personalize o sistema para o seu clube e competição.</p>
              </div>
-             <div className="form-card">
-                <div className="form-card-title">🏟 Dados do Clube</div>
-                <div className="form-row full"><div className="form-group"><label>Nome do Clube</label><input className="inp" value={config.clube} onChange={e=>setConfig({...config,clube:e.target.value})} /></div></div>
-                <div className="form-row">
-                  <div className="form-group"><label>Cidade</label><input className="inp" value={config.cidade} onChange={e=>setConfig({...config,cidade:e.target.value})} /></div>
-                  <div className="form-group"><label>Estado</label><input className="inp" value={config.estado} onChange={e=>setConfig({...config,estado:e.target.value})} /></div>
-                </div>
+
+             <div className="config-container grid gap-6">
+               <div className="form-card !mb-0">
+                  <div className="form-card-title">🏟 Dados do Clube</div>
+                  <div className="form-row full">
+                    <div className="form-group">
+                      <label>Nome do Clube Responsável</label>
+                      <input className="inp" value={config.clube} onChange={e=>setConfig({...config,clube:e.target.value})} placeholder="Ex: FEFUSPA" />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Cidade Sede</label>
+                      <input className="inp" value={config.cidade} onChange={e=>setConfig({...config,cidade:e.target.value})} placeholder="Ex: Santarém" />
+                    </div>
+                    <div className="form-group">
+                      <label>Estado (UF)</label>
+                      <input className="inp" value={config.estado} onChange={e=>setConfig({...config,estado:e.target.value})} placeholder="Ex: PA" />
+                    </div>
+                  </div>
+               </div>
+
+               <div className="form-card !mb-0">
+                  <div className="form-card-title">⚙️ Comportamento do Sistema</div>
+                  <div className="config-list">
+                    <div className="config-row">
+                      <div className="config-info">
+                        <div className="config-label">Auto-incrementar Nº do Jogo</div>
+                        <div className="config-desc">Gera o próximo número automaticamente ao salvar uma súmula.</div>
+                      </div>
+                      <div className="form-group w-24">
+                        <input 
+                          type="number" 
+                          className="inp text-center" 
+                          value={config.nextNum} 
+                          onChange={e=>setConfig({...config, nextNum: parseInt(e.target.value) || 1})} 
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="config-row">
+                      <div className="config-info">
+                        <div className="config-label">Modo para Dispositivos Móveis</div>
+                        <div className="config-desc">Otimiza botões e tabelas para telas menores e comandos de toque.</div>
+                      </div>
+                      <div 
+                        className={`toggle-switch ${config.mobileMode ? 'on' : ''}`}
+                        onClick={() => setConfig({...config, mobileMode: !config.mobileMode})}
+                      ></div>
+                    </div>
+
+                    <div className="config-row">
+                      <div className="config-info">
+                        <div className="config-label">Confirmação antes de Registrar</div>
+                        <div className="config-desc">Evita salvamentos acidentais durante o preenchimento.</div>
+                      </div>
+                      <div 
+                        className={`toggle-switch ${config.confirmSave ? 'on' : ''}`}
+                        onClick={() => setConfig({...config, confirmSave: !config.confirmSave})}
+                      ></div>
+                    </div>
+                  </div>
+               </div>
+
+               <div className="form-card !mb-0">
+                  <div className="form-card-title">🛡️ Gerenciamento de Dados</div>
+                  <p className="text-xs text-[var(--sub)] mb-4">Atenção: A limpeza do histórico é irreversível e afetará os registros salvos localmente.</p>
+                  <div className="flex gap-3 flex-wrap">
+                    <button className="btn btn-ghost border-red-200 text-red-500 hover:bg-red-50" onClick={()=>{if(confirm('Apagar histórico de súmulas permanentemente?')){setHistorico([]); localStorage.removeItem('pt_historico');}}}>
+                      🗑 Esvaziar Histórico
+                    </button>
+                    <button className="btn btn-ghost border-blue-200 text-[var(--sky)]" onClick={()=>{
+                      const data = JSON.stringify({config, historico, agendados});
+                      const blob = new Blob([data], {type: 'application/json'});
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `backup_fefuspa_${new Date().toISOString().slice(0,10)}.json`;
+                      a.click();
+                    }}>
+                      📤 Exportar Backup (JSON)
+                    </button>
+                  </div>
+               </div>
              </div>
-             <div style={{display:'flex', gap:'.75rem', flexWrap:'wrap', marginTop:'2rem'}}>
-                <button className="btn btn-primary" onClick={()=>{localStorage.setItem('pt_config', JSON.stringify(config)); alert('Salvo.')}}>💾 Salvar Configurações</button>
-                <button className="btn btn-ghost" onClick={()=>{if(confirm('Apagar histórico?')){setHistorico([]); localStorage.removeItem('pt_historico');}}}>🗑 Limpar Histórico</button>
+
+             <div className="fixed bottom-6 right-6 sm:relative sm:bottom-0 sm:right-0 mt-8">
+                <button 
+                  className="btn btn-primary shadow-2xl sm:shadow-lg !py-4 sm:!py-3 !px-8 text-lg sm:text-base w-full sm:w-auto" 
+                  onClick={()=>{localStorage.setItem('pt_config', JSON.stringify(config)); alert('Configurações salvas com sucesso!')}}
+                >
+                  <CheckCircle2 className="mr-2" size={20} /> Salvar Configurações
+                </button>
              </div>
            </div>
         </div>
@@ -1722,11 +1876,11 @@ export default function App() {
                 <tr><th></th><th></th><th></th><th></th><th></th></tr>
               </thead>
               <tbody>
-                {Array.from({length: 8}).map((_, i) => {
+                {Array.from({length: 15}).map((_, i) => {
                    const p = playersA[i];
                    const g = p ? goalsA.filter(x => x.name.includes(p.name)).length : 0;
-                   const p1subs = subsGridA[i].filter(v => v !== '').map(v => ({v, c: '#38bdf8'}));
-                   const p2subs = subsGridA2[i].filter(v => v !== '').map(v => ({v, c: '#ef4444'}));
+                   const p1subs = subsGridA[i].filter((v, idx) => v !== '' && subsGridA_Per[i][idx] === 1).map(v => ({v, c: '#38bdf8'}));
+                   const p2subs = subsGridA[i].filter((v, idx) => v !== '' && subsGridA_Per[i][idx] === 2).map(v => ({v, c: '#ef4444'}));
                    const allSubs = [...p1subs, ...p2subs];
                    return (
                     <tr key={i}>
@@ -1771,11 +1925,11 @@ export default function App() {
                 <tr><th></th><th></th><th></th><th></th><th></th></tr>
               </thead>
               <tbody>
-                {Array.from({length: 8}).map((_, i) => {
+                {Array.from({length: 15}).map((_, i) => {
                    const p = playersB[i];
                    const g = p ? goalsB.filter(x => x.name.includes(p.name)).length : 0;
-                   const p1subs = subsGridB[i].filter(v => v !== '').map(v => ({v, c: '#38bdf8'}));
-                   const p2subs = subsGridB2[i].filter(v => v !== '').map(v => ({v, c: '#ef4444'}));
+                   const p1subs = subsGridB[i].filter((v, idx) => v !== '' && subsGridB_Per[i][idx] === 1).map(v => ({v, c: '#38bdf8'}));
+                   const p2subs = subsGridB[i].filter((v, idx) => v !== '' && subsGridB_Per[i][idx] === 2).map(v => ({v, c: '#ef4444'}));
                    const allSubs = [...p1subs, ...p2subs];
                    return (
                     <tr key={i}>
