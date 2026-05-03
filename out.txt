@@ -1,11 +1,1 @@
- ⨯ Failed to start server
-Error: listen EADDRINUSE: address already in use :::8080
-    at <unknown> (Error: listen EADDRINUSE: address already in use :::8080)
-    at new Promise (<anonymous>) {
-  code: 'EADDRINUSE',
-  errno: -98,
-  syscall: 'listen',
-  address: '::',
-  port: 8080
-}
-[?25h
+                 {historico.filter(r => (r.teamA+r.teamB+r.comp).toLowerCase().includes(histSearch.toLowerCase())).map((r,i) => (
