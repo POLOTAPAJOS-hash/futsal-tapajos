@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import * as XLSX from "xlsx";
 import { auth } from "../lib/firebase";
 import { Player, Goal, HistoricoItem, AgendadoItem, GameData } from "../lib/types";
 
@@ -204,20 +205,78 @@ export function useSumulaState() {
     }
   }, [initSumulaInitialData]);
 
+  const [importData, setImportData] = useState<{ headers: string[]; rows: unknown[] } | null>(null);
+  const [colMap, setColMap] = useState<Record<string, string>>({ name: "" });
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    alert("Simulando leitura de arquivo. Mapeamento de colunas disponível no modal.");
-    setImportData({ headers: ["Número", "Nome Completo", "Posição", "RG", "Nascimento"] });
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      const wb = XLSX.read(bstr, { type: "binary" });
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][];
+      
+      if (data.length > 0) {
+        const headers = data[0].map(h => String(h || ""));
+        const rows = data.slice(1);
+        setImportData({ headers, rows });
+        
+        // Auto-detect a column that looks like "Nome"
+        const nameIdx = headers.findIndex(h => h.toLowerCase().includes("nome") || h.toLowerCase().includes("atleta"));
+        if (nameIdx !== -1) {
+          setColMap({ name: String(nameIdx) });
+        }
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   const doImportXlsx = () => {
-    alert("Jogadores importados com sucesso!");
-    setImportModal({ isOpen: false, team: "a" });
-  };
+    if (!importData) return;
+    
+    const team = importModal.team;
+    const baseId = team === 'a' ? 0 : 100;
+    const nameIdx = parseInt(colMap.name);
 
-  const [importData, setImportData] = useState<{ headers: string[] } | null>(null);
-  const [colMap, setColMap] = useState<Record<string, string>>({ num: "", name: "", pos: "" });
+    if (isNaN(nameIdx)) {
+      alert("Por favor, selecione a coluna que contém o Nome do Atleta.");
+      return;
+    }
+    
+    const newPlayers: Player[] = importData.rows.map((rowItem, idx) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = rowItem as any[];
+      const name = String(row[nameIdx] || "").trim();
+      
+      if (!name) return null;
+
+      return {
+        id: baseId + idx,
+        num: String(idx + 1), // Auto-assign number starting from 1
+        name: name,
+        role: "",
+        y: false,
+        r: false
+      };
+    }).filter((p): p is Player => p !== null);
+
+    if (newPlayers.length === 0) {
+      alert("Nenhum nome de atleta válido encontrado na coluna selecionada.");
+      return;
+    }
+
+    if (team === 'a') setPlayersA(newPlayers);
+    else setPlayersB(newPlayers);
+
+    setImportModal({ ...importModal, isOpen: false });
+    setImportData(null);
+    setColMap({ name: "" });
+    alert(`${newPlayers.length} atletas importados para a Equipe ${team.toUpperCase()}!`);
+  };
 
   const addGoal = (team: "a" | "b") => {
     const num = prompt("Número do Jogador:");

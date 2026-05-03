@@ -6,8 +6,8 @@ interface ImportModalProps {
   teamName: string;
   onClose: () => void;
   setTeam: (team: "a" | "b") => void;
-  importData: { headers: string[] } | null;
-  setImportData: (val: { headers: string[] } | null) => void;
+  importData: { headers: string[]; rows: unknown[] } | null;
+  setImportData: (val: { headers: string[]; rows: unknown[] } | null) => void;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   colMap: Record<string, string>;
   setColMap: (val: Record<string, string>) => void;
@@ -51,27 +51,26 @@ export function ImportModal({
           </div>
 
           {!importData ? (
-            <label className="drop-zone block">
-              <input type="file" ref={fileInputRef} accept=".xlsx,.xls,.csv" onChange={handleFileUpload} />
+            <label className="drop-zone block cursor-pointer">
+              <input type="file" ref={fileInputRef} accept=".xlsx,.xls,.csv" onChange={handleFileUpload} className="hidden" />
               <div className="drop-icon">📄</div>
               <div className="drop-title">Selecione seu Excel/CSV</div>
-              <div className="drop-sub">Colunas recomendadas: Número, Nome, Posição</div>
+              <div className="drop-sub">Apenas o nome do atleta é necessário</div>
             </label>
           ) : (
             <>
               <div className="col-map" style={{ display: "block" }}>
                 <div className="col-map-title text-xs font-black uppercase text-sky mb-4">🔧 Mapeamento de Colunas</div>
                 <div className="flex flex-col gap-3 px-2">
-                   {['num', 'name', 'pos'].map(field => (
-                     <div key={field} className="flex items-center justify-between gap-4">
-                        <span className="text-[0.7rem] font-black uppercase text-[var(--sub)]">{field==='num'?'Nº Camisa':field==='name'?'Nome':'Posição'}</span>
-                        <select className="col-map-select flex-1 h-8 text-xs" value={colMap[field]} onChange={e => setColMap({ ...colMap, [field]: e.target.value })}>
-                          <option value="">— não mapear —</option>
-                          {importData.headers.map((h: string, i: number) => <option key={i} value={i}>{h}</option>)}
-                        </select>
-                     </div>
-                   ))}
+                   <div className="flex items-center justify-between gap-4">
+                      <span className="text-[0.7rem] font-black uppercase text-[var(--sub)]">Nome do Atleta</span>
+                      <select className="col-map-select flex-1 h-8 text-xs" value={colMap.name} onChange={e => setColMap({ ...colMap, name: e.target.value })}>
+                        <option value="">— selecionar coluna —</option>
+                        {importData.headers.map((h: string, i: number) => <option key={i} value={i}>{h}</option>)}
+                      </select>
+                   </div>
                 </div>
+                <p className="text-[0.6rem] text-slate-400 mt-4 px-2 italic">A numeração será atribuída automaticamente seguindo a ordem da lista.</p>
               </div>
             </>
           )}
