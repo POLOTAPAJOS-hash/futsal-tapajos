@@ -967,11 +967,11 @@ export default function App() {
                    {/* White Stripe */}
                    <rect x="40" y="40" width="20" height="75" fill="#ffffff" />
                    {/* FEFUSPA Text */}
-                   <text x="50" y="28" fill="#ffffff" fontSize="16" font-black textAnchor="middle" style={{fontFamily: 'sans-serif', fontWeight: 900}}>FEFUSPA</text>
+                   <text x="50" y="28" fill="#ffffff" fontSize="16" textAnchor="middle" style={{fontFamily: 'sans-serif', fontWeight: 900}}>FEFUSPA</text>
                    {/* Blue Star */}
                    <path d="M50,55 L53,63 L61,63 L55,68 L57,76 L50,71 L43,76 L45,68 L39,63 L47,63 Z" fill="#1e3a8a" />
                    {/* Date */}
-                   <text x="50" y="108" fill="#1e3a8a" fontSize="8" font-black textAnchor="middle" style={{fontFamily: 'sans-serif', fontWeight: 900}}>05 04 88</text>
+                   <text x="50" y="108" fill="#1e3a8a" fontSize="8" textAnchor="middle" style={{fontFamily: 'sans-serif', fontWeight: 900}}>05 04 88</text>
                  </svg>
                </div>
                <h1 className="text-xl font-black text-slate-900 text-center uppercase tracking-tighter">
