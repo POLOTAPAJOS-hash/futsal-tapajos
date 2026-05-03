@@ -159,6 +159,13 @@ body::before {
   padding: .15rem .45rem; border-radius: 20px;
   line-height: 1.4;
 }
+.nav-badge-alt {
+  margin-left: auto;
+  background: #f1f5f9;
+  color: #64748b; font-size: .65rem; font-weight: 700;
+  padding: .15rem .45rem; border-radius: 20px;
+  line-height: 1.4;
+}
 
 .sidebar-footer {
   padding: 1rem 1.25rem;

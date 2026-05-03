@@ -24,6 +24,12 @@ export function SumulaTab({
   gameData,
   setGameData,
   sumula,
+  playersA,
+  playersB,
+  goalsA,
+  goalsB,
+  addGoal,
+  setImportModal,
 }: SumulaTabProps) {
   const steps = [
     "Identificação",
